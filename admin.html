@@ -63,6 +63,9 @@
 
         <!-- PRODUCTS VIEW -->
         <div id="view-products">
+            <div style="margin-bottom: 1rem;">
+                <input type="text" id="product-search" class="form-input" placeholder="Søg efter titel eller kunstner..." style="max-width: 300px;">
+            </div>
             <table>
                 <thead>
                     <tr>
@@ -142,7 +145,7 @@
     <script>
         // --- SUPABASE CONNECTION ---
         const supabaseUrl = 'https://jxprvsfrsnikzkophoty.supabase.co';
-        const supabaseKey = 'sb_publishable_PBq6r9zAfGDl77RxTzoGlw_NKLHIUP4';
+        const supabaseKey = 'sb_publishable_PBq6r9zAfGDl77RxTzoGlw_NKLHIUP4'; // Replace with your ANON key if needed for public access, but this works for admin login
         const client = supabase.createClient(supabaseUrl, supabaseKey);
 
         let products = [];
@@ -207,9 +210,16 @@
             }
         }
 
+        // Search Listener
+        document.getElementById('product-search').addEventListener('input', renderTable);
+
         function renderTable() {
+            const searchTerm = document.getElementById('product-search').value.toLowerCase();
             tableBody.innerHTML = '';
-            products.forEach((product, index) => {
+            
+            const filtered = products.filter(p => (p.title || '').toLowerCase().includes(searchTerm) || (p.author || '').toLowerCase().includes(searchTerm));
+
+            filtered.forEach((product, index) => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td style="font-family: monospace; font-size: 0.85rem;">${product.src}</td>

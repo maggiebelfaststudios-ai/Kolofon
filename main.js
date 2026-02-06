@@ -251,7 +251,11 @@ async function initCarousel() {
             }
         }
     } catch (err) {
-        console.warn('Supabase fetch failed (using local fallback):', err);
+        console.error(
+            "CRITICAL: Product fetch from Supabase failed. The public site will be empty. Error details below:",
+            err
+        );
+        document.body.innerHTML += `<div style="position:fixed; top:10px; left:10px; background:red; color:white; padding:10px; z-index:9999;">Supabase connection failed. Check console (F12).</div>`;
     }
 
     // If no products found in DB, stop initialization
