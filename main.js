@@ -187,7 +187,7 @@ function initLanguage() {
         // Fade out and reload to apply changes cleanly
         document.body.classList.add('page-fade-out');
         setTimeout(() => {
-            location.reload();
+            window.location.href = window.location.pathname; // More robust reload than location.reload()
         }, 400);
     });
     
