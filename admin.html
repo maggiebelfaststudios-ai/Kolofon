@@ -341,7 +341,7 @@
                 title: document.getElementById('new-title').value,
                 author: document.getElementById('new-author').value,
                 price: document.getElementById('new-price').value,
-                stockquantity: parseInt(document.getElementById('new-stock').value, 10),
+                stockQuantity: parseInt(document.getElementById('new-stock').value, 10),
                 material: document.getElementById('new-material').value,
                 dimensions: document.getElementById('new-dimensions').value,
                 description: document.getElementById('new-desc').value
@@ -391,7 +391,7 @@
         });
 
         function editProduct(id) {
-            const product = products.find(p => p.id === id);
+            const product = products.find(p => String(p.id) === String(id));
             if (!product) return;
 
             // Populate form
