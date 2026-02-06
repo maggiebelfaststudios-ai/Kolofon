@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kolofon Admin</title>
     <link rel="stylesheet" href="style.css">
-    <script src="products.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         .admin-container { max-width: 1000px; margin: 0 auto; padding: 2rem; }
@@ -141,13 +140,13 @@
     </main>
 
     <script>
-        // Load data from global variable defined in products.js
         // --- SUPABASE CONNECTION ---
         const supabaseUrl = 'https://jxprvsfrsnikzkophoty.supabase.co';
         const supabaseKey = 'sb_publishable_PBq6r9zAfGDl77RxTzoGlw_NKLHIUP4';
         const client = supabase.createClient(supabaseUrl, supabaseKey);
 
         let products = [];
+        let editingProductId = null;
         let orders = [];
 
         async function loadProducts() {
@@ -218,6 +217,7 @@
                     <td>${product.price}</td>
                     <td>${product.stockQuantity > 0 ? product.stockQuantity + ' stk.' : '<span style="color:red">Udsolgt</span>'}</td>
                     <td>
+                        <button onclick="editProduct('${product.id}')" class="btn-primary" style="margin-right: 0.5rem; padding: 0.5rem 1rem; font-size: 0.75rem;">Rediger</button>
                         <button onclick="deleteProduct('${product.id}')" class="btn-danger">Fjern</button>
                     </td>
                 `;
@@ -275,48 +275,139 @@
         addForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            // UI: Start Loading
+            const submitBtn = addForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = editingProductId ? 'Opdaterer...' : 'Uploader og Gemmer...';
+            submitBtn.disabled = true;
+
             // 1. Upload File to Supabase Storage
             const fileInput = document.getElementById('new-file');
             const file = fileInput.files[0];
             
-            if (!file) {
+            // Validation: File is required only for new products
+            if (!editingProductId && !file) {
                 alert("Vælg venligst en fil.");
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
                 return;
             }
 
-            const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '-')}`; // Clean filename
-            const { data: uploadData, error: uploadError } = await client.storage.from('models').upload(fileName, file);
+            let publicUrl = null;
 
-            if (uploadError) {
-                alert('Fejl ved upload af fil: ' + uploadError.message);
-                return;
+            // Upload only if a new file is selected
+            if (file) {
+                const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '-')}`; // Clean filename
+                const { data: uploadData, error: uploadError } = await client.storage.from('models').upload(fileName, file);
+
+                if (uploadError) {
+                    alert('Fejl ved upload af fil: ' + uploadError.message);
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                    return;
+                }
+
+                const { data: { publicUrl: url } } = client.storage.from('models').getPublicUrl(fileName);
+                publicUrl = url;
             }
 
-            // 2. Get Public URL
-            const { data: { publicUrl } } = client.storage.from('models').getPublicUrl(fileName);
-
-            const newProduct = {
-                id: Date.now().toString(), // Simple unique ID
+            const productData = {
                 title: document.getElementById('new-title').value,
                 author: document.getElementById('new-author').value,
                 price: document.getElementById('new-price').value,
                 stockQuantity: parseInt(document.getElementById('new-stock').value, 10),
-                src: publicUrl,
                 material: document.getElementById('new-material').value,
                 dimensions: document.getElementById('new-dimensions').value,
                 description: document.getElementById('new-desc').value
             };
 
-            const { error } = await client.from('products').insert([newProduct]);
+            if (publicUrl) {
+                productData.src = publicUrl;
+            }
+
+            let error = null;
+
+            if (editingProductId) {
+                // Update existing product
+                const { error: updateError } = await client.from('products').update(productData).eq('id', editingProductId);
+                error = updateError;
+            } else {
+                // Create new product
+                productData.id = Date.now().toString();
+                const { error: insertError } = await client.from('products').insert([productData]);
+                error = insertError;
+            }
 
             if (error) {
-                alert('Fejl ved oprettelse: ' + error.message);
+                alert('Fejl: ' + error.message);
+                submitBtn.textContent = originalText;
             } else {
-                addForm.reset();
+                alert(editingProductId ? 'Produkt opdateret!' : 'Produkt gemt i Supabase!');
+                resetFormState();
                 loadProducts();
-                alert('Produkt gemt i Supabase!');
             }
+            
+            // UI: Stop Loading
+            submitBtn.disabled = false;
         });
+
+        function editProduct(id) {
+            const product = products.find(p => p.id === id);
+            if (!product) return;
+
+            // Populate form
+            document.getElementById('new-title').value = product.title || '';
+            document.getElementById('new-author').value = product.author || '';
+            document.getElementById('new-price').value = product.price || '';
+            document.getElementById('new-stock').value = product.stockQuantity || 0;
+            document.getElementById('new-material').value = product.material || '';
+            document.getElementById('new-dimensions').value = product.dimensions || '';
+            document.getElementById('new-desc').value = product.description || '';
+            
+            // File input is optional during edit
+            document.getElementById('new-file').required = false;
+
+            editingProductId = id;
+            
+            // Update UI
+            const submitBtn = addForm.querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Opdater Produkt';
+            submitBtn.classList.remove('btn-success');
+            submitBtn.classList.add('btn-primary');
+            
+            document.querySelector('.editor-panel h2').textContent = 'Rediger Produkt';
+            
+            // Add Cancel button
+            if (!document.getElementById('cancel-edit-btn')) {
+                const cancelBtn = document.createElement('button');
+                cancelBtn.id = 'cancel-edit-btn';
+                cancelBtn.type = 'button';
+                cancelBtn.textContent = 'Annuller';
+                cancelBtn.className = 'btn-danger';
+                cancelBtn.style.marginTop = '1rem';
+                cancelBtn.style.marginLeft = '1rem';
+                cancelBtn.onclick = resetFormState;
+                addForm.appendChild(cancelBtn);
+            }
+
+            document.querySelector('.editor-panel').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function resetFormState() {
+            editingProductId = null;
+            addForm.reset();
+            document.getElementById('new-file').required = true;
+            
+            const submitBtn = addForm.querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Tilføj Produkt';
+            submitBtn.classList.add('btn-success');
+            submitBtn.classList.remove('btn-primary');
+            
+            document.querySelector('.editor-panel h2').textContent = 'Tilføj Nyt Produkt';
+            
+            const cancelBtn = document.getElementById('cancel-edit-btn');
+            if (cancelBtn) cancelBtn.remove();
+        }
 
         function exportData() {
             // Convert the data back into a JavaScript file string

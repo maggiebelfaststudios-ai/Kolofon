@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initViewportFix();
     initSlider();
     initPageTransitions();
+    initLanguage();
     updateCartCount();
 });
 
@@ -21,6 +22,120 @@ const supabaseKey = 'sb_publishable_PBq6r9zAfGDl77RxTzoGlw_NKLHIUP4';
 let supabaseClient = null;
 if (typeof supabase !== 'undefined') {
     supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+}
+
+// --- TRANSLATIONS ---
+const TRANSLATIONS = {
+    da: {
+        nav_home: "Hjem",
+        nav_products: "Produkter",
+        nav_about: "Om os",
+        nav_contact: "Kontakt",
+        index_title: "Velkommen til Kolofon.",
+        index_text: "Vi forvandler digital præcision til fysisk nærvær og skaber premium akrylvægkunst, der ikke bare observeres, men opleves.",
+        slider_text: "Swipe for at Udforske",
+        cart_title: "Din Kurv",
+        cart_empty: "Din kurv er tom.",
+        cart_browse: "Se Kollektion",
+        about_title: "Om Kolofon",
+        about_text_1: "Kolofon repræsenterer krydsfeltet mellem digital præcision og fysisk nærvær. Vi tror på, at vægkunst ikke bare skal observeres, men opleves.",
+        about_text_2: "Vores premium akrylværker er skabt til at fange lys og dybde, hvilket forvandler atmosfæren i ethvert rum. Født ud af et ønske om at bringe gallerikvalitet ind i det moderne hjem, er hvert stykke i vores kollektion et studie i form og funktion.",
+        about_text_3: "Vi inviterer dig til at udforske vores kollektion og finde det værk, der resonerer med dit rum.",
+        contact_title: "Kontakt Os",
+        contact_text: "Har du spørgsmål om en ordre eller en speciel forespørgsel? Vi er her for at hjælpe.",
+        
+        // Dynamic strings
+        stock_in: "På Lager",
+        stock_out: "Ikke på lager",
+        stock_left: "På lager ({qty} tilbage)",
+        add_to_cart: "Læg i Kurv",
+        added: "Tilføjet",
+        out_of_stock_msg: "Beklager, denne vare er ikke på lager.",
+        low_stock_msg: "Beklager, vi har kun {qty} enheder på lager.",
+        checkout_title: "Gå til kassen",
+        full_name: "Fulde Navn",
+        email: "Email",
+        address: "Adresse",
+        city: "By",
+        zip: "Postnummer",
+        total: "Total",
+        complete_purchase: "Gennemfør Køb",
+        cancel: "Annuller",
+        processing: "Behandler...",
+        thank_you: "Tak!",
+        order_received: "Din ordre er modtaget.",
+        continue_shopping: "Fortsæt med at handle",
+        payment_error: "Der opstod en fejl ved behandlingen af din ordre. Prøv venligst igen.",
+        subtotal: "Subtotal",
+        shipping: "Fragt",
+        shipping_calc: "Beregnes ved kassen",
+        checkout_btn: "Gå til kassen",
+        remove: "Fjern",
+        dimensions: "Dimensioner",
+        material: "Materiale"
+    },
+    en: {
+        nav_home: "Home",
+        nav_products: "Products",
+        nav_about: "About",
+        nav_contact: "Contact",
+        index_title: "Welcome to Kolofon.",
+        index_text: "We transform digital precision into physical presence, creating premium acrylic wall art that is not just observed, but experienced.",
+        slider_text: "Swipe to Explore",
+        cart_title: "Your Cart",
+        cart_empty: "Your cart is empty.",
+        cart_browse: "Browse Collection",
+        about_title: "About Kolofon",
+        about_text_1: "Kolofon represents the intersection of digital precision and physical presence. We believe that wall art should not just be observed, but experienced.",
+        about_text_2: "Our premium acrylic pieces are crafted to capture light and depth, transforming the atmosphere of any room. Born from a desire to bring gallery-quality aesthetics into the modern home, every piece in our collection is a study in form and function.",
+        about_text_3: "We invite you to explore our collection and find the piece that resonates with your space.",
+        contact_title: "Contact Us",
+        contact_text: "Have a question about an order or a custom request? We're here to help.",
+
+        // Dynamic strings
+        stock_in: "In Stock",
+        stock_out: "Out of Stock",
+        stock_left: "In Stock ({qty} left)",
+        add_to_cart: "Add to Cart",
+        added: "Added",
+        out_of_stock_msg: "Sorry, this item is out of stock.",
+        low_stock_msg: "Sorry, we only have {qty} units of this item in stock.",
+        checkout_title: "Checkout",
+        full_name: "Full Name",
+        email: "Email",
+        address: "Address",
+        city: "City",
+        zip: "Zip Code",
+        total: "Total",
+        complete_purchase: "Complete Purchase",
+        cancel: "Cancel",
+        processing: "Processing...",
+        thank_you: "Thank You!",
+        order_received: "Your order has been placed successfully.",
+        continue_shopping: "Continue Shopping",
+        payment_error: "There was an issue processing your order. Please try again.",
+        subtotal: "Subtotal",
+        shipping: "Shipping",
+        shipping_calc: "Calculated at checkout",
+        checkout_btn: "Checkout",
+        remove: "Remove",
+        dimensions: "Dimensions",
+        material: "Material",
+
+        // Product Descriptions (English overrides)
+        desc_1770319091415: "A stringent and pattern-breaking interpretation of Orwell's timeless classic.",
+        desc_1770319395363: "A deconstruction of Dostoevsky's great work, depicting the tension between the intellectual and the conscience."
+    }
+};
+
+let currentLang = localStorage.getItem('kolofon_lang') || 'da';
+
+function t(key, params = {}) {
+    let text = TRANSLATIONS[currentLang][key] || key;
+    for (const [k, v] of Object.entries(params)) {
+        text = text.replace(`{${k}}`, v);
+    }
+    return text;
 }
 
 /**
@@ -52,6 +167,36 @@ function initNavigation() {
             mobileMenu.classList.remove('active');
             body.style.overflow = '';
         });
+    });
+}
+
+/**
+ * Initialize Language Logic
+ */
+function initLanguage() {
+    const langBtn = document.getElementById('lang-btn');
+    if (!langBtn) return;
+
+    // Set initial button text (If current is DA, button shows EN to switch, and vice versa)
+    langBtn.textContent = currentLang === 'da' ? 'EN' : 'DA';
+
+    langBtn.addEventListener('click', () => {
+        const newLang = currentLang === 'da' ? 'en' : 'da';
+        localStorage.setItem('kolofon_lang', newLang);
+        
+        // Fade out and reload to apply changes cleanly
+        document.body.classList.add('page-fade-out');
+        setTimeout(() => {
+            location.reload();
+        }, 400);
+    });
+    
+    // Apply translations to static elements
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (TRANSLATIONS[currentLang][key]) {
+            el.textContent = TRANSLATIONS[currentLang][key];
+        }
     });
 }
 
@@ -109,11 +254,9 @@ async function initCarousel() {
         console.warn('Supabase fetch failed (using local fallback):', err);
     }
 
-    // Fallback to local file if DB fetch failed or returned empty
+    // If no products found in DB, stop initialization
     if (products.length === 0) {
-        products = (typeof PRODUCT_CATALOG !== 'undefined') ? PRODUCT_CATALOG : [];
-        const storedProducts = localStorage.getItem('kolofon_products');
-        if (storedProducts) products = JSON.parse(storedProducts);
+        return;
     }
 
     let currentIndex = 0;
@@ -148,21 +291,30 @@ async function initCarousel() {
             if (stockEl) {
                 const stockQty = product.stockQuantity !== undefined ? product.stockQuantity : 0;
                 if (stockQty <= 0) {
-                    stockEl.textContent = 'Out of Stock';
+                    stockEl.textContent = t('stock_out');
                     stockEl.classList.add('out-of-stock');
                     if (addToCartBtn) addToCartBtn.disabled = true;
                 } else {
-                    stockEl.textContent = `In Stock (${stockQty} left)`;
+                    stockEl.textContent = t('stock_left', { qty: stockQty });
                     stockEl.classList.remove('out-of-stock');
                     if (addToCartBtn) addToCartBtn.disabled = false;
                 }
             }
             
             // Update Description
-            if (descEl) descEl.textContent = product.description;
+            let descriptionText = product.description;
+            if (currentLang === 'en') {
+                const key = `desc_${product.id}`;
+                if (TRANSLATIONS.en[key]) {
+                    descriptionText = TRANSLATIONS.en[key];
+                }
+            }
+            if (descEl) descEl.textContent = descriptionText;
 
             // Update Specs (Dimensions & Material)
             if (specValues.length >= 2) {
+                // We don't translate the values themselves (e.g. "24x36"), but we could translate labels if we selected them
+                // The labels are static in HTML, handled by data-i18n
                 specValues[0].textContent = product.dimensions;
                 specValues[1].textContent = product.material;
             }
@@ -224,7 +376,7 @@ async function initCarousel() {
                 // Visual feedback
                 if (btnText && getComputedStyle(btnText).display !== 'none') {
                     const originalText = btnText.textContent;
-                    btnText.textContent = 'Added';
+                    btnText.textContent = t('added');
                     setTimeout(() => { btnText.textContent = originalText; }, 2000);
                 } else {
                     // Mobile Icon Feedback
@@ -247,7 +399,7 @@ function addToCart(product) {
     const stockQty = product.stockQuantity !== undefined ? product.stockQuantity : 0;
     
     if (stockQty <= 0) {
-        alert("Sorry, this item is out of stock.");
+        alert(t('out_of_stock_msg'));
         return false;
     }
 
@@ -256,7 +408,7 @@ function addToCart(product) {
 
     if (existingItem) {
         if (existingItem.quantity + 1 > stockQty) {
-            alert(`Sorry, we only have ${stockQty} units of this item in stock.`);
+            alert(t('low_stock_msg', { qty: stockQty }));
             return false;
         }
         existingItem.quantity += 1;
@@ -295,38 +447,38 @@ function initCartPage() {
 
         cartContainer.innerHTML = `
             <div class="checkout-form-container" style="max-width: 500px; margin: 0 auto;">
-                <h2 style="margin-bottom: 1.5rem; font-family: var(--font-serif); text-align: center;">Checkout</h2>
+                <h2 style="margin-bottom: 1.5rem; font-family: var(--font-serif); text-align: center;">${t('checkout_title')}</h2>
                 <form id="purchase-form">
                     <div class="form-group">
-                        <label class="form-label">Full Name</label>
+                        <label class="form-label">${t('full_name')}</label>
                         <input type="text" name="fullName" class="form-input" required placeholder="John Doe">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Email</label>
+                        <label class="form-label">${t('email')}</label>
                         <input type="email" name="email" class="form-input" required placeholder="john@example.com">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Address</label>
+                        <label class="form-label">${t('address')}</label>
                         <input type="text" name="address" class="form-input" required placeholder="Street Address">
                     </div>
                     <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                         <div>
-                            <label class="form-label">City</label>
+                            <label class="form-label">${t('city')}</label>
                             <input type="text" name="city" class="form-input" required placeholder="City">
                         </div>
                         <div>
-                            <label class="form-label">Zip Code</label>
+                            <label class="form-label">${t('zip')}</label>
                             <input type="text" name="zip" class="form-input" required placeholder="Zip">
                         </div>
                     </div>
                     
                     <div class="summary-total" style="margin: 2rem 0;">
-                        <span>Total</span>
+                        <span>${t('total')}</span>
                         <span>DKK ${total.toLocaleString('da-DK')}</span>
                     </div>
 
-                    <button type="submit" class="btn-primary full-width">Complete Purchase</button>
-                    <button type="button" id="cancel-checkout" style="background:none; border:none; width:100%; padding:1rem; cursor:pointer; color: #666; text-transform:uppercase; font-size: 0.75rem; letter-spacing: 0.05em; margin-top: 0.5rem;">Cancel</button>
+                    <button type="submit" class="btn-primary full-width">${t('complete_purchase')}</button>
+                    <button type="button" id="cancel-checkout" style="background:none; border:none; width:100%; padding:1rem; cursor:pointer; color: #666; text-transform:uppercase; font-size: 0.75rem; letter-spacing: 0.05em; margin-top: 0.5rem;">${t('cancel')}</button>
                 </form>
             </div>
         `;
@@ -336,7 +488,7 @@ function initCartPage() {
             const btn = e.target.querySelector('button[type="submit"]');
             const originalText = btn.textContent;
             
-            btn.textContent = 'Processing...';
+            btn.textContent = t('processing');
             btn.disabled = true;
 
             // 1. Gather Data
@@ -353,14 +505,14 @@ function initCartPage() {
 
                 cartContainer.innerHTML = `
                     <div style="text-align: center; padding: 4rem 0;">
-                        <h2 style="font-family: var(--font-serif); margin-bottom: 1rem; font-size: 2rem;">Thank You!</h2>
-                        <p style="color: #666; margin-bottom: 2rem;">Your order has been placed successfully.</p>
-                        <a href="products.html" class="btn-primary" style="width: auto; display: inline-flex;">Continue Shopping</a>
+                        <h2 style="font-family: var(--font-serif); margin-bottom: 1rem; font-size: 2rem;">${t('thank_you')}</h2>
+                        <p style="color: #666; margin-bottom: 2rem;">${t('order_received')}</p>
+                        <a href="products.html" class="btn-primary" style="width: auto; display: inline-flex;">${t('continue_shopping')}</a>
                     </div>
                 `;
             } catch (error) {
                 console.error("Payment failed:", error);
-                alert("There was an issue processing your order. Please try again.");
+                alert(t('payment_error'));
                 btn.textContent = originalText;
                 btn.disabled = false;
             }
@@ -375,7 +527,7 @@ function initCartPage() {
         const cart = JSON.parse(localStorage.getItem('kolofon_cart') || '[]');
         
         if (cart.length === 0) {
-            cartContainer.innerHTML = '<div style="text-align: center; padding: 4rem 0;"><p>Your cart is empty.</p><a href="products.html" class="btn-primary" style="margin-top: 1rem; width: auto; display: inline-flex;">Browse Collection</a></div>';
+            cartContainer.innerHTML = `<div style="text-align: center; padding: 4rem 0;"><p>${t('cart_empty')}</p><a href="products.html" class="btn-primary" style="margin-top: 1rem; width: auto; display: inline-flex;">${t('cart_browse')}</a></div>`;
             return;
         }
 
@@ -397,17 +549,17 @@ function initCartPage() {
                             <button class="qty-btn plus" data-index="${index}">+</button>
                         </div>
                     </div>
-                    <button class="cart-remove-btn" data-index="${index}">Remove</button>
+                    <button class="cart-remove-btn" data-index="${index}">${t('remove')}</button>
                 </div>
             `;
         });
 
         html += `</div>
             <div class="cart-summary">
-                <div class="summary-row"><span>Subtotal</span><span>DKK ${total.toLocaleString('da-DK')}</span></div>
-                <div class="summary-row"><span>Shipping</span><span style="color: #888;">Calculated at checkout</span></div>
-                <div class="summary-total"><span>Total</span><span>DKK ${total.toLocaleString('da-DK')}</span></div>
-                <button id="checkout-btn" class="btn-primary full-width">Checkout</button>
+                <div class="summary-row"><span>${t('subtotal')}</span><span>DKK ${total.toLocaleString('da-DK')}</span></div>
+                <div class="summary-row"><span>${t('shipping')}</span><span style="color: #888;">${t('shipping_calc')}</span></div>
+                <div class="summary-total"><span>${t('total')}</span><span>DKK ${total.toLocaleString('da-DK')}</span></div>
+                <button id="checkout-btn" class="btn-primary full-width">${t('checkout_btn')}</button>
             </div>
         `;
 
@@ -500,17 +652,6 @@ async function finalizeOrder(cart, customerData) {
         }
     }
 
-    // 3. Fallback: Update LocalStorage Inventory (keeps the local fallback in sync)
-    let inventory = (typeof PRODUCT_CATALOG !== 'undefined') ? PRODUCT_CATALOG : [];
-    const storedInventory = localStorage.getItem('kolofon_products');
-    if (storedInventory) inventory = JSON.parse(storedInventory);
-
-    cart.forEach(cartItem => {
-        const product = inventory.find(p => p.id === cartItem.id);
-        if (product) product.stockQuantity = Math.max(0, (product.stockQuantity || 0) - cartItem.quantity);
-    });
-    
-    localStorage.setItem('kolofon_products', JSON.stringify(inventory));
     localStorage.removeItem('kolofon_cart');
     updateCartCount();
 }
@@ -584,6 +725,7 @@ function initSlider() {
         // Fade text based on progress
         const opacity = 1 - (currentX / maxDrag);
         text.style.opacity = opacity;
+        text.textContent = t('slider_text'); // Ensure text is translated
     };
 
     const endDrag = () => {

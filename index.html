@@ -18,6 +18,7 @@
                 <span class="cart-count-bubble" style="display: none;">0</span>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
             </a>
+            <button id="lang-btn" class="nav-text-btn" style="background:none; border:none; cursor:pointer; font-weight:500; margin-left:0.5rem; font-family: var(--font-sans);">EN</button>
             <button class="icon-btn menu-toggle" aria-label="Menu">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
@@ -27,20 +28,20 @@
     <!-- Full Screen Mobile Menu Overlay -->
     <div class="mobile-menu-overlay">
         <nav class="mobile-nav">
-            <a href="index.html" class="mobile-link">Home</a>
-            <a href="products.html" class="mobile-link">Products</a>
-            <a href="about.html" class="mobile-link">About</a>
-            <a href="contact.html" class="mobile-link">Contact</a>
+            <a href="index.html" class="mobile-link" data-i18n="nav_home">Hjem</a>
+            <a href="products.html" class="mobile-link" data-i18n="nav_products">Produkter</a>
+            <a href="about.html" class="mobile-link" data-i18n="nav_about">Om os</a>
+            <a href="contact.html" class="mobile-link" data-i18n="nav_contact">Kontakt</a>
         </nav>
     </div>
 
     <!-- Main Content -->
     <main class="content-page" style="text-align: center; justify-content: center;">
-        <h1>Welcome to Kolofon.</h1>
-        <p>We transform digital precision into physical presence, creating premium acrylic wall art that is not just observed, but experienced.</p>
+        <h1 data-i18n="index_title">Velkommen til Kolofon.</h1>
+        <p data-i18n="index_text">Vi forvandler digital præcision til fysisk nærvær og skaber premium akrylvægkunst, der ikke bare observeres, men opleves.</p>
         
         <div class="slider-container" id="explore-slider">
-            <div class="slider-text">Slide to Explore</div>
+            <div class="slider-text" data-i18n="slider_text">Swipe for at Udforske</div>
             <div class="slider-thumb">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
             </div>
