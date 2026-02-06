@@ -311,9 +311,10 @@ async function initCarousel() {
             // Update Description
             let descriptionText = product.description;
             if (currentLang === 'en') {
-                const key = `desc_${product.id}`;
-                if (TRANSLATIONS.en[key]) {
-                    descriptionText = TRANSLATIONS.en[key];
+                }
+                // 2. Fallback to hardcoded JS object (legacy support)
+                else if (TRANSLATIONS.en[`desc_${product.id}`]) {
+                    descriptionText = TRANSLATIONS.en[`desc_${product.id}`];
                 }
             }
             if (descEl) descEl.textContent = descriptionText;

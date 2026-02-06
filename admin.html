@@ -119,6 +119,10 @@
                         <label class="form-label">Beskrivelse</label>
                         <textarea id="new-desc" class="form-input" rows="3" placeholder="Produkt beskrivelse..."></textarea>
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">Beskrivelse (Engelsk)</label>
+                        <textarea id="new-desc-en" class="form-input" rows="3" placeholder="Product description (English)..."></textarea>
+                    </div>
                     <button type="submit" class="btn-success">Tilføj Produkt</button>
                 </form>
             </div>
@@ -344,7 +348,8 @@
                 stockQuantity: parseInt(document.getElementById('new-stock').value, 10),
                 material: document.getElementById('new-material').value,
                 dimensions: document.getElementById('new-dimensions').value,
-                description: document.getElementById('new-desc').value
+                description: document.getElementById('new-desc').value,
+                description_en: document.getElementById('new-desc-en').value
             };
 
             if (publicUrl) {
@@ -402,6 +407,7 @@
             document.getElementById('new-material').value = product.material || '';
             document.getElementById('new-dimensions').value = product.dimensions || '';
             document.getElementById('new-desc').value = product.description || '';
+            document.getElementById('new-desc-en').value = product.description_en || '';
             
             // File input is optional during edit
             document.getElementById('new-file').required = false;
