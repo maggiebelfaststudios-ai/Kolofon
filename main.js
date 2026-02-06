@@ -211,13 +211,7 @@ function initLanguage() {
 
     // Handle language-specific links (e.g., terms page)
     document.querySelectorAll('[data-i18n-link="terms"]').forEach(el => {
-        if (currentLang === 'en') {
-            el.href = 'Terms and Conditions.txt';
-            el.textContent = t('footer_terms');
-        } else {
-            el.href = 'Handelsbetingelser.txt';
-            el.textContent = t('footer_terms');
-        }
+        el.textContent = t('footer_terms');
     });
 }
 
