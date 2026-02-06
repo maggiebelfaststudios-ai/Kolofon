@@ -72,7 +72,12 @@ const TRANSLATIONS = {
         checkout_btn: "Gå til kassen",
         remove: "Fjern",
         dimensions: "Dimensioner",
-        material: "Materiale"
+        material: "Materiale",
+        footer_contact: "Kontakt",
+        footer_follow: "Følg Os",
+        footer_legal: "Juridisk",
+        footer_terms: "Handelsbetingelser",
+        footer_rights: "Alle rettigheder forbeholdes."
     },
     en: {
         nav_home: "Home",
@@ -121,6 +126,11 @@ const TRANSLATIONS = {
         remove: "Remove",
         dimensions: "Dimensions",
         material: "Material",
+        footer_contact: "Contact",
+        footer_follow: "Follow Us",
+        footer_legal: "Legal",
+        footer_terms: "Terms and Conditions",
+        footer_rights: "All rights reserved.",
 
         // Product Descriptions (English overrides)
         desc_1770319091415: "A stringent and pattern-breaking interpretation of Orwell's timeless classic.",
@@ -196,6 +206,17 @@ function initLanguage() {
         const key = el.getAttribute('data-i18n');
         if (TRANSLATIONS[currentLang][key]) {
             el.textContent = TRANSLATIONS[currentLang][key];
+        }
+    });
+
+    // Handle language-specific links (e.g., terms page)
+    document.querySelectorAll('[data-i18n-link="terms"]').forEach(el => {
+        if (currentLang === 'en') {
+            el.href = 'Terms and Conditions.txt';
+            el.textContent = t('footer_terms');
+        } else {
+            el.href = 'Handelsbetingelser.txt';
+            el.textContent = t('footer_terms');
         }
     });
 }
