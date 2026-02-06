@@ -241,6 +241,8 @@ async function initCarousel() {
     let products = [];
 
     try {
+        if (!supabaseClient) console.error("DEBUG: Supabase client is missing. Is the script tag in HTML?");
+
         if (supabaseClient) {
             const { data, error } = await supabaseClient.from('products').select('*').order('id', { ascending: true });
             
@@ -260,6 +262,7 @@ async function initCarousel() {
 
     // If no products found in DB, stop initialization
     if (products.length === 0) {
+        if (titleEl) titleEl.textContent = "No products found";
         return;
     }
 
