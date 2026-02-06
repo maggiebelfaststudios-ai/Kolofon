@@ -311,6 +311,9 @@ async function initCarousel() {
             // Update Description
             let descriptionText = product.description;
             if (currentLang === 'en') {
+                // 1. Check for description_en in database
+                if (product.description_en) {
+                    descriptionText = product.description_en;
                 }
                 // 2. Fallback to hardcoded JS object (legacy support)
                 else if (TRANSLATIONS.en[`desc_${product.id}`]) {
