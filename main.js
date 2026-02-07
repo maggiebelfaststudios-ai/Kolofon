@@ -5,7 +5,6 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
-    initProductLogic();
     initCarousel();
     initCartPage();
     initViewportFix();
@@ -13,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initPageTransitions();
     initLanguage();
     updateCartCount();
+    initFooterYear();
+    initContactPage();
 });
 
 // --- SUPABASE CONFIGURATION ---
@@ -43,6 +44,9 @@ const TRANSLATIONS = {
         about_text_3: "Vi inviterer dig til at udforske vores kollektion og finde det værk, der resonerer med dit rum.",
         contact_title: "Kontakt Os",
         contact_text: "Har du spørgsmål om en ordre eller en speciel forespørgsel? Vi er her for at hjælpe.",
+        contact_message: "Besked",
+        contact_send: "Send Besked",
+        contact_success: "Tak for din besked. Vi vender tilbage hurtigst muligt.",
         
         // Dynamic strings
         stock_in: "På Lager",
@@ -96,6 +100,9 @@ const TRANSLATIONS = {
         about_text_3: "We invite you to explore our collection and find the piece that resonates with your space.",
         contact_title: "Contact Us",
         contact_text: "Have a question about an order or a custom request? We're here to help.",
+        contact_message: "Message",
+        contact_send: "Send Message",
+        contact_success: "Thank you for your message. We will get back to you shortly.",
 
         // Dynamic strings
         stock_in: "In Stock",
@@ -215,14 +222,6 @@ function initLanguage() {
     });
 }
 
-/**
- * Initialize Product Logic
- * Placeholder for Add to Cart functionality and Model interactions.
- */
-function initProductLogic() {
-    // Logic moved to initCarousel to access product data
-}
-
 function updateCartCount() {
     const cart = JSON.parse(localStorage.getItem('kolofon_cart') || '[]');
     const count = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -305,8 +304,9 @@ async function initCarousel() {
             if (authorEl) authorEl.textContent = product.author ? `by ${product.author}` : '';
             
             // Format price: DKK 2.000 (Currency followed by sum, with dot separator)
-            const rawPrice = product.price.toString().replace(/\D/g, '');
-            const priceNum = parseInt(rawPrice, 10);
+            const priceNum = typeof product.price === 'number' 
+                ? product.price 
+                : parseFloat(String(product.price).replace(/[^0-9.,]/g, '').replace(',', '.'));
             priceEl.textContent = !isNaN(priceNum) ? `DKK ${priceNum.toLocaleString('da-DK')}` : product.price;
             
             // Update Stock Status
@@ -440,8 +440,9 @@ function addToCart(product) {
         existingItem.quantity += 1;
     } else {
         // Parse price to number for storage
-        const rawPrice = product.price.toString().replace(/\D/g, '');
-        const priceNum = parseInt(rawPrice, 10);
+        const priceNum = typeof product.price === 'number' 
+            ? product.price 
+            : parseFloat(String(product.price).replace(/[^0-9.,]/g, '').replace(',', '.'));
 
         cart.push({
             id: product.id,
@@ -717,6 +718,60 @@ function initViewportFix() {
 }
 
 /**
+ * Initialize Footer Year
+ * Automatically updates the copyright year.
+ */
+function initFooterYear() {
+    const yearEl = document.getElementById('copyright-year');
+    if (yearEl) {
+        yearEl.textContent = new Date().getFullYear();
+    }
+}
+
+/**
+ * Initialize Contact Page
+ * Handles contact form submission.
+ */
+function initContactPage() {
+    const contactForm = document.getElementById('contact-form');
+    if (!contactForm) return;
+
+    contactForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = contactForm.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+
+        btn.textContent = t('processing');
+        btn.disabled = true;
+
+        const formData = new FormData(contactForm);
+        const submission = Object.fromEntries(formData.entries());
+
+        try {
+            if (supabaseClient) {
+                const { error } = await supabaseClient
+                    .from('contact_messages')
+                    .insert([{
+                        full_name: submission.name,
+                        email: submission.email,
+                        message: submission.message
+                    }]);
+                if (error) throw error;
+            }
+
+            alert(t('contact_success'));
+            contactForm.reset();
+        } catch (error) {
+            console.error("Error sending message:", error);
+            alert(t('payment_error'));
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    });
+}
+
+/**
  * Initialize Interactive Slider
  * Handles the "Slide to Explore" functionality on the home page.
  */
@@ -795,7 +850,7 @@ function initPageTransitions() {
 
     document.querySelectorAll('a[href]').forEach(link => {
         // Ensure the link is internal and not a hash link
-        if (link.hostname === window.location.hostname && link.pathname !== window.location.pathname && !link.getAttribute('href').startsWith('#')) {
+        if (link.hostname === window.location.hostname && link.pathname !== window.location.pathname && !link.getAttribute('href').startsWith('#') && link.target !== '_blank') {
             
             link.addEventListener('click', (e) => {
                 // Ignore clicks with modifier keys (e.g., Ctrl+Click to open in new tab)

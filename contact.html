@@ -9,6 +9,7 @@
 </head>
 <body>
 
+    <!-- Sticky Navigation Bar -->
     <header class="navbar">
         <div class="logo-container">
             <a href="index.html"><img src="logo.png" alt="Kolofon" class="logo-img" style="height: 45px; display: block;"></a>
@@ -25,6 +26,7 @@
         </div>
     </header>
 
+    <!-- Full Screen Mobile Menu Overlay -->
     <div class="mobile-menu-overlay">
         <nav class="mobile-nav">
             <a href="index.html" class="mobile-link" data-i18n="nav_home">Hjem</a>
@@ -34,10 +36,46 @@
         </nav>
     </div>
 
+    <!-- Main Content -->
     <main class="content-page">
         <h1 data-i18n="contact_title">Kontakt Os</h1>
-        <p style="text-align: center;" data-i18n="contact_text">Har du spørgsmål om en ordre eller en speciel forespørgsel? Vi er her for at hjælpe.</p>
+        <p data-i18n="contact_text">Har du spørgsmål om en ordre eller en speciel forespørgsel? Vi er her for at hjælpe.</p>
+        
+        <form id="contact-form" style="width: 100%; margin-top: 2rem;">
+            <div class="form-group">
+                <label class="form-label" data-i18n="full_name">Fulde Navn</label>
+                <input type="text" name="name" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" data-i18n="email">Email</label>
+                <input type="email" name="email" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" data-i18n="contact_message">Besked</label>
+                <textarea name="message" class="form-input" rows="5" required></textarea>
+            </div>
+            <button type="submit" class="btn-primary full-width" data-i18n="contact_send">Send Besked</button>
+        </form>
     </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4 data-i18n="footer_contact">Kontakt</h4>
+                <p>Valmuevej 9, 1. 3.</p>
+                <p>CVR: 40808914</p>
+                <p><a href="mailto:simonlsamuelsen@gmail.com">simonlsamuelsen@gmail.com</a></p>
+            </div>
+            <div class="footer-section">
+                <h4 data-i18n="footer_legal">Juridisk</h4>
+                <a href="Handelsbetingelser.pdf" class="footer-link" target="_blank" data-i18n-link="terms">Handelsbetingelser</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; <span id="copyright-year">2026</span> Kolofon. <span data-i18n="footer_rights">Alle rettigheder forbeholdes.</span></p>
+        </div>
+    </footer>
 
     <script src="main.js" defer></script>
 </body>
