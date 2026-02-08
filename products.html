@@ -58,9 +58,7 @@
                     environment-image="studio_small_02_2k.hdr"
                     exposure="1.5"
                     tone-mapping="commerce"
-                    auto-rotate
-                    rotation-per-second="6deg"
-                    auto-rotate-delay="0">
+                    >
                 </model-viewer>
                 
                 <!-- Carousel Controls -->
@@ -121,5 +119,52 @@
     </footer>
 
     <script src="main.js" defer></script>
+    <script>
+    (function() {
+        const viewer = document.getElementById('product-viewer');
+        if (!viewer) return;
+
+        const BASE_THETA = 0;
+        const PHI = 75;
+        const SWING = 35;
+        const CYCLE_DURATION = 16000;
+
+        let animId = null;
+        let userInteracting = false;
+        let startTime = null;
+
+        function animate(time) {
+            if (!startTime) startTime = time;
+
+            if (!userInteracting) {
+                const elapsed = time - startTime;
+                const t = (elapsed % CYCLE_DURATION) / CYCLE_DURATION;
+                const angle = SWING * Math.sin(t * 2 * Math.PI);
+                viewer.cameraOrbit = `${BASE_THETA + angle}deg ${PHI}deg auto`;
+            }
+            animId = requestAnimationFrame(animate);
+        }
+
+        viewer.addEventListener('camera-change', (e) => {
+            if (e.detail.source === 'user-interaction') {
+                userInteracting = true;
+            }
+        });
+
+        function snapBack() {
+            userInteracting = false;
+            startTime = null;
+            viewer.cameraOrbit = `${BASE_THETA}deg ${PHI}deg auto`;
+        }
+
+        viewer.addEventListener('mouseup', snapBack);
+        viewer.addEventListener('touchend', snapBack);
+        viewer.addEventListener('pointerup', snapBack);
+
+        viewer.addEventListener('load', () => {
+            animId = requestAnimationFrame(animate);
+        });
+    })();
+    </script>
 </body>
 </html>
