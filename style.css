@@ -13,6 +13,27 @@
     --navbar-height: 64px;
 }
 
+/* ===== DARK MODE ===== */
+[data-theme="dark"] {
+    --color-bg: #111111;
+    --color-bg-subtle: #1a1a1a;
+    --color-text: #f5f5f5;
+    --color-text-muted: #999999;
+    --color-border: #333333;
+}
+
+[data-theme="dark"] .navbar {
+    background: rgba(17, 17, 17, 0.9);
+}
+
+[data-theme="dark"] .logo-img {
+    filter: invert(1);
+}
+
+[data-theme="dark"] .site-footer {
+    background: #0a0a0a;
+}
+
 /* Reset & Base */
 *, *::before, *::after {
     margin: 0;

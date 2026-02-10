@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSlider();
     initPageTransitions();
     initLanguage();
+    initTheme();
     updateCartCount();
     initFooterYear();
     initContactPage();
@@ -285,6 +286,36 @@ function initLanguage() {
     // Handle language-specific links (e.g., terms page)
     document.querySelectorAll('[data-i18n-link="terms"]').forEach(el => {
         el.textContent = t('footer_terms');
+    });
+}
+
+/**
+ * Initialize Theme (Dark/Light Mode) Toggle
+ */
+function initTheme() {
+    const themeBtn = document.getElementById('theme-btn');
+    if (!themeBtn) return;
+
+    const moonIcon = themeBtn.querySelector('.icon-moon');
+    const sunIcon = themeBtn.querySelector('.icon-sun');
+
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        if (moonIcon && sunIcon) {
+            moonIcon.style.display = theme === 'dark' ? 'none' : '';
+            sunIcon.style.display = theme === 'dark' ? '' : 'none';
+        }
+    }
+
+    // Apply saved preference (or default to light)
+    const savedTheme = localStorage.getItem('kolofon_theme') || 'light';
+    applyTheme(savedTheme);
+
+    themeBtn.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'light';
+        const next = current === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('kolofon_theme', next);
+        applyTheme(next);
     });
 }
 
