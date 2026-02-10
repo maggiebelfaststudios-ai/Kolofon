@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCartCount();
     initFooterYear();
     initContactPage();
+    preloadModels();
 });
 
 // --- SUPABASE CONFIGURATION ---
@@ -24,6 +25,11 @@ let supabaseClient = null;
 if (typeof supabase !== 'undefined') {
     supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 }
+
+// --- CONFIGURATION ---
+const SHIPPING_THRESHOLD = 1500;
+const SHIPPING_COST_SHOP = 39;
+const SHIPPING_COST_HOME = 59;
 
 // --- TRANSLATIONS ---
 const TRANSLATIONS = {
@@ -47,7 +53,8 @@ const TRANSLATIONS = {
         contact_message: "Besked",
         contact_send: "Send Besked",
         contact_success: "Tak for din besked. Vi vender tilbage hurtigst muligt.",
-        
+        contact_error: "Der opstod en fejl. Prøv venligst igen.",
+
         // Dynamic strings
         stock_in: "På Lager",
         stock_out: "Ikke på lager",
@@ -59,6 +66,7 @@ const TRANSLATIONS = {
         checkout_title: "Gå til kassen",
         full_name: "Fulde Navn",
         email: "Email",
+        phone: "Telefon",
         address: "Adresse",
         city: "By",
         zip: "Postnummer",
@@ -74,6 +82,18 @@ const TRANSLATIONS = {
         shipping: "Fragt",
         shipping_calc: "Beregnes ved kassen",
         checkout_btn: "Gå til kassen",
+        shipping_method: "Levering",
+        ship_shop: "Pakkeshop (GLS) - 39 kr",
+        ship_home: "Hjemmelevering - 59 kr",
+        free_shipping: "Gratis fragt",
+        select_shop: "Søg Pakkeshops",
+        change_shop: "Søg Igen",
+        shop_required: "Du skal vælge en pakkeshop for at fortsætte.",
+        no_shop_selected: "Ingen pakkeshop valgt",
+        loading_shops: "Søger...",
+        no_shops_found: "Ingen pakkeshops fundet for dette postnummer.",
+        enter_zip_first: "Indtast venligst et postnummer først.",
+        shop_fetch_error: "Kunne ikke hente pakkeshops. Prøv igen.",
         remove: "Fjern",
         dimensions: "Dimensioner",
         material: "Materiale",
@@ -103,6 +123,7 @@ const TRANSLATIONS = {
         contact_message: "Message",
         contact_send: "Send Message",
         contact_success: "Thank you for your message. We will get back to you shortly.",
+        contact_error: "Something went wrong. Please try again.",
 
         // Dynamic strings
         stock_in: "In Stock",
@@ -115,6 +136,7 @@ const TRANSLATIONS = {
         checkout_title: "Checkout",
         full_name: "Full Name",
         email: "Email",
+        phone: "Phone",
         address: "Address",
         city: "City",
         zip: "Zip Code",
@@ -130,6 +152,18 @@ const TRANSLATIONS = {
         shipping: "Shipping",
         shipping_calc: "Calculated at checkout",
         checkout_btn: "Checkout",
+        shipping_method: "Delivery",
+        ship_shop: "Parcel Shop (GLS) - DKK 39",
+        ship_home: "Home Delivery - DKK 59",
+        free_shipping: "Free Shipping",
+        select_shop: "Search Parcel Shops",
+        change_shop: "Search Again",
+        shop_required: "You must select a parcel shop to continue.",
+        no_shop_selected: "No parcel shop selected",
+        loading_shops: "Searching...",
+        no_shops_found: "No parcel shops found for this zip code.",
+        enter_zip_first: "Please enter a zip code first.",
+        shop_fetch_error: "Could not load parcel shops. Please try again.",
         remove: "Remove",
         dimensions: "Dimensions",
         material: "Material",
@@ -167,8 +201,10 @@ function initNavigation() {
     if (!menuToggle || !mobileMenu) return;
 
     menuToggle.addEventListener('click', () => {
+        // Clear any swipe-direction transform before opening
+        mobileMenu.style.transform = '';
         const isActive = mobileMenu.classList.toggle('active');
-        
+
         // Lock body scroll when menu is open
         if (isActive) {
             body.style.overflow = 'hidden';
@@ -185,6 +221,36 @@ function initNavigation() {
             body.style.overflow = '';
         });
     });
+
+    // Close menu on swipe in any direction
+    let touchStartX = 0;
+    let touchStartY = 0;
+    const SWIPE_THRESHOLD = 30;
+
+    mobileMenu.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    mobileMenu.addEventListener('touchend', (e) => {
+        if (!mobileMenu.classList.contains('active')) return;
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        const dy = e.changedTouches[0].clientY - touchStartY;
+        if (Math.abs(dx) > SWIPE_THRESHOLD || Math.abs(dy) > SWIPE_THRESHOLD) {
+            // Determine swipe direction for exit animation
+            let tx = '100%', ty = '0';
+            if (Math.abs(dx) >= Math.abs(dy)) {
+                tx = dx > 0 ? '100%' : '-100%';
+                ty = '0';
+            } else {
+                tx = '0';
+                ty = dy > 0 ? '100%' : '-100%';
+            }
+            mobileMenu.style.transform = `translate(${tx}, ${ty})`;
+            mobileMenu.classList.remove('active');
+            body.style.overflow = '';
+        }
+    }, { passive: true });
 }
 
 /**
@@ -229,6 +295,21 @@ function updateCartCount() {
     bubbles.forEach(bubble => {
         bubble.textContent = count;
         bubble.style.display = count > 0 ? 'flex' : 'none';
+    });
+}
+
+/**
+ * Preload 3D model files into browser cache on non-product pages.
+ */
+function preloadModels() {
+    if (document.querySelector('#product-viewer')) return;
+    if (!supabaseClient) return;
+
+    supabaseClient.from('products').select('src').then(({ data }) => {
+        if (!data) return;
+        data.forEach(p => {
+            if (p.src) fetch(p.src, { mode: 'cors' }).catch(() => {});
+        });
     });
 }
 
@@ -281,6 +362,11 @@ async function initCarousel() {
     }
 
     let currentIndex = 0;
+
+    // Preload all other models into browser cache
+    products.forEach((p, i) => {
+        if (i !== 0 && p.src) fetch(p.src, { mode: 'cors' }).catch(() => {});
+    });
 
     // On mobile, reset the camera to the initial position after the user stops interacting.
     const resetCameraOnMobile = () => {
@@ -346,36 +432,44 @@ async function initCarousel() {
             }
         };
 
+        const loader = document.getElementById('model-loader');
+
         if (direction) {
             prevBtn.disabled = true;
             nextBtn.disabled = true;
-            
-            // 1. Determine Animation Classes
-            // Next -> Exit Left, Enter Right
-            // Prev -> Exit Right, Enter Left
-            const exitClass = direction === 'next' ? 'viewer-exit-left' : 'viewer-exit-right';
+
             const enterClass = direction === 'next' ? 'viewer-enter-right' : 'viewer-enter-left';
 
+            // Immediately hide the old model and show spinner
             if (detailsContent) detailsContent.classList.add('fade-out');
-            viewer.classList.add(exitClass);
-            
-            setTimeout(() => {
-                updateDOM();
-                
-                // Prepare for entry (instant move)
-                viewer.classList.remove(exitClass);
+            viewer.style.visibility = 'hidden';
+            viewer.style.opacity = '0';
+            if (loader) loader.style.display = '';
+
+            updateDOM();
+
+            const onLoaded = () => {
+                viewer.removeEventListener('load', onLoaded);
+
+                // Hide spinner
+                if (loader) loader.style.display = 'none';
+
+                // Prepare for entry
+                viewer.style.transition = 'none';
                 viewer.classList.add(enterClass);
-                
-                // Force Reflow to apply the instant move
+                viewer.style.visibility = '';
+                viewer.style.opacity = '';
                 void viewer.offsetWidth;
-                
-                // Animate In
+
+                // Animate in
+                viewer.style.transition = '';
                 viewer.classList.remove(enterClass);
                 if (detailsContent) detailsContent.classList.remove('fade-out');
-                
+
                 prevBtn.disabled = false;
                 nextBtn.disabled = false;
-            }, 400);
+            };
+            viewer.addEventListener('load', onLoaded);
         } else {
             updateDOM();
         }
@@ -468,10 +562,39 @@ function initCartPage() {
     const cartContainer = document.querySelector('.cart-container');
     if (!cartContainer) return; // Not on cart page
 
+    // Supabase Edge Function endpoints
+    const PICKUP_POINTS_URL = `${supabaseUrl}/functions/v1/pickup-points`;
+    const CREATE_PAYMENT_URL = `${supabaseUrl}/functions/v1/create-payment`;
+
+    // Handle return from PensoPay payment page
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+        // Payment confirmed — clear cart and show thank you
+        localStorage.removeItem('kolofon_cart');
+        updateCartCount();
+        cartContainer.innerHTML = `
+            <div style="text-align: center; padding: 4rem 0;">
+                <h2 style="font-family: var(--font-serif); margin-bottom: 1rem; font-size: 2rem;">${t('thank_you')}</h2>
+                <p style="color: #666; margin-bottom: 2rem;">${t('order_received')}</p>
+                <a href="products.html" class="btn-primary" style="width: auto; display: inline-flex;">${t('continue_shopping')}</a>
+            </div>
+        `;
+        // Clean URL without reloading
+        history.replaceState(null, '', 'cart.html');
+        return;
+    }
+    if (params.get('payment') === 'cancelled') {
+        // Customer cancelled — clean URL and show cart normally
+        history.replaceState(null, '', 'cart.html');
+    }
+
     const renderCheckout = () => {
         const cart = JSON.parse(localStorage.getItem('kolofon_cart') || '[]');
-        const total = cart.reduce((sum, item) => sum + (item.priceValue * item.quantity), 0);
+        const subtotal = cart.reduce((sum, item) => sum + (item.priceValue * item.quantity), 0);
 
+        // Default to 'shop' (39 DKK) unless subtotal > 1500 (Free)
+        let shippingCost = subtotal > SHIPPING_THRESHOLD ? 0 : SHIPPING_COST_SHOP;
+        
         cartContainer.innerHTML = `
             <div class="checkout-form-container" style="max-width: 500px; margin: 0 auto;">
                 <h2 style="margin-bottom: 1.5rem; font-family: var(--font-serif); text-align: center;">${t('checkout_title')}</h2>
@@ -483,6 +606,10 @@ function initCartPage() {
                     <div class="form-group">
                         <label class="form-label">${t('email')}</label>
                         <input type="email" name="email" class="form-input" required placeholder="john@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">${t('phone')}</label>
+                        <input type="tel" name="phone" class="form-input" required placeholder="+45 12 34 56 78">
                     </div>
                     <div class="form-group">
                         <label class="form-label">${t('address')}</label>
@@ -498,10 +625,32 @@ function initCartPage() {
                             <input type="text" name="zip" class="form-input" required placeholder="Zip">
                         </div>
                     </div>
+
+                    <div class="form-group" style="margin-top: 1.5rem;">
+                        <label class="form-label">${t('shipping_method')}</label>
+                        <div style="border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden;">
+                            <label style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid var(--color-border); cursor: pointer; background: var(--color-bg-subtle);">
+                                <input type="radio" name="shipping" value="shop" checked style="margin-right: 1rem;">
+                                <span>${t('ship_shop')}</span>
+                            </label>
+                            <label style="display: flex; align-items: center; padding: 1rem; cursor: pointer; background: var(--color-bg-subtle);">
+                                <input type="radio" name="shipping" value="home" style="margin-right: 1rem;">
+                                <span>${t('ship_home')}</span>
+                            </label>
+                        </div>
+                        
+                        <div id="shop-selector-wrapper" style="display: block; margin-top: 1rem; padding: 1rem; background: var(--color-bg-subtle); border-radius: 4px;">
+                            <p id="shop-selected-text" style="font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--color-text-muted); font-style: italic;">${t('no_shop_selected')}</p>
+                            <button type="button" id="btn-select-shop" class="btn-primary" style="width: auto; font-size: 0.8rem; padding: 0.5rem 1rem;">${t('select_shop')}</button>
+                            <div id="shop-list" style="margin-top: 0.75rem; max-height: 300px; overflow-y: auto;"></div>
+                            <input type="hidden" name="service_point" id="input-service-point">
+                        </div>
+                    </div>
                     
                     <div class="summary-total" style="margin: 2rem 0;">
-                        <span>${t('total')}</span>
-                        <span>DKK ${total.toLocaleString('da-DK')}</span>
+                        <div style="display:flex; justify-content:space-between; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: normal;"><span>${t('subtotal')}</span><span>DKK ${subtotal.toLocaleString('da-DK')}</span></div>
+                        <div style="display:flex; justify-content:space-between; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: normal;"><span>${t('shipping')}</span><span id="shipping-display">DKK ${shippingCost}</span></div>
+                        <div style="display:flex; justify-content:space-between; font-size: 1.25rem; font-weight: 500; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border);"><span>${t('total')}</span><span id="total-display">DKK ${(subtotal + shippingCost).toLocaleString('da-DK')}</span></div>
                     </div>
 
                     <button type="submit" class="btn-primary full-width">${t('complete_purchase')}</button>
@@ -509,6 +658,111 @@ function initCartPage() {
                 </form>
             </div>
         `;
+
+        // Handle Shipping Selection Logic
+        const shippingInputs = document.querySelectorAll('input[name="shipping"]');
+        const shippingDisplay = document.getElementById('shipping-display');
+        const totalDisplay = document.getElementById('total-display');
+        const shopWrapper = document.getElementById('shop-selector-wrapper');
+
+        // Custom Shop Selector — fetches GLS pickup points via Supabase proxy
+        const shopList = document.getElementById('shop-list');
+        const searchBtn = document.getElementById('btn-select-shop');
+
+        const selectShop = (point) => {
+            const input = document.getElementById('input-service-point');
+            const text = document.getElementById('shop-selected-text');
+
+            const servicePoint = {
+                id: point.id || point.number?.toString(),
+                name: point.name,
+                address: point.address,
+                zipcode: point.zipcode,
+                city: point.city
+            };
+
+            input.value = JSON.stringify(servicePoint);
+            text.textContent = `${servicePoint.name}, ${servicePoint.address}, ${servicePoint.zipcode} ${servicePoint.city}`;
+            text.style.fontStyle = 'normal';
+            text.style.fontWeight = '500';
+            searchBtn.textContent = t('change_shop');
+
+            // Highlight selected, dim others
+            shopList.querySelectorAll('.shop-option').forEach(el => {
+                el.style.background = el.dataset.pointId === servicePoint.id ? 'var(--color-bg-subtle)' : '';
+                el.style.borderColor = el.dataset.pointId === servicePoint.id ? 'var(--color-text)' : 'var(--color-border)';
+            });
+        };
+
+        const fetchPickupPoints = async () => {
+            const zip = document.querySelector('input[name="zip"]').value.trim();
+            if (!zip || !/^\d{4}$/.test(zip)) {
+                alert(t('enter_zip_first'));
+                return;
+            }
+
+            searchBtn.textContent = t('loading_shops');
+            searchBtn.style.opacity = '0.7';
+            searchBtn.disabled = true;
+            shopList.innerHTML = '';
+
+            try {
+                const res = await fetch(`${PICKUP_POINTS_URL}?zipcode=${encodeURIComponent(zip)}`);
+                const data = await res.json();
+
+                if (!res.ok || !Array.isArray(data) || data.length === 0) {
+                    shopList.innerHTML = `<p style="font-size:0.85rem; color:var(--color-text-muted); padding:0.5rem 0;">${t('no_shops_found')}</p>`;
+                    return;
+                }
+
+                data.forEach(point => {
+                    const id = point.id || point.number?.toString();
+                    const dist = point.distance ? `${(point.distance / 1000).toFixed(1)} km` : '';
+                    const el = document.createElement('button');
+                    el.type = 'button';
+                    el.className = 'shop-option';
+                    el.dataset.pointId = id;
+                    el.style.cssText = 'display:block; width:100%; text-align:left; padding:0.75rem; margin-bottom:0.5rem; border:1px solid var(--color-border); border-radius:4px; background:none; cursor:pointer; font-family:inherit; font-size:0.85rem; line-height:1.4; transition: border-color 0.2s;';
+                    el.innerHTML = `<strong>${point.name}</strong><br>${point.address}, ${point.zipcode} ${point.city}${dist ? `<br><span style="color:var(--color-text-muted); font-size:0.8rem;">${dist}</span>` : ''}`;
+                    el.addEventListener('click', () => selectShop(point));
+                    shopList.appendChild(el);
+                });
+            } catch (err) {
+                console.error('Pickup points fetch error:', err);
+                shopList.innerHTML = `<p style="font-size:0.85rem; color:#c00; padding:0.5rem 0;">${t('shop_fetch_error')}</p>`;
+            } finally {
+                searchBtn.textContent = t('select_shop');
+                searchBtn.style.opacity = '1';
+                searchBtn.disabled = false;
+            }
+        };
+
+        searchBtn.addEventListener('click', fetchPickupPoints);
+
+        shippingInputs.forEach(input => {
+            input.addEventListener('change', (e) => {
+                const isShop = e.target.value === 'shop';
+                if (shopWrapper) shopWrapper.style.display = isShop ? 'block' : 'none';
+
+                if (subtotal > SHIPPING_THRESHOLD) {
+                    shippingCost = 0;
+                    shippingDisplay.textContent = t('free_shipping');
+                } else {
+                    // 39 for shop, 59 for home
+                    shippingCost = isShop ? SHIPPING_COST_SHOP : SHIPPING_COST_HOME;
+                    shippingDisplay.textContent = `DKK ${shippingCost}`;
+                }
+                totalDisplay.textContent = `DKK ${(subtotal + shippingCost).toLocaleString('da-DK')}`;
+            });
+        });
+        
+        // Trigger initial calculation check for free shipping
+        if (subtotal > SHIPPING_THRESHOLD) {
+            shippingCost = 0;
+            shippingDisplay.textContent = t('free_shipping');
+            totalDisplay.textContent = `DKK ${subtotal.toLocaleString('da-DK')}`;
+            if (shopWrapper) shopWrapper.style.display = 'block'; // Default is shop
+        }
 
         document.getElementById('purchase-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -522,21 +776,40 @@ function initCartPage() {
             const formData = new FormData(e.target);
             const customerData = Object.fromEntries(formData.entries());
             const cart = JSON.parse(localStorage.getItem('kolofon_cart') || '[]');
+            
+            // Parse service point if it exists
+            const servicePointData = formData.get('service_point') ? JSON.parse(formData.get('service_point')) : null;
+
+            const shippingDetails = {
+                method: formData.get('shipping'),
+                cost: shippingCost,
+                servicePoint: servicePointData
+            };
+
+            if (shippingDetails.method === 'shop' && !shippingDetails.servicePoint) {
+                alert(t('shop_required'));
+                btn.textContent = originalText;
+                btn.disabled = false;
+                return;
+            }
 
             try {
-                // 2. Simulate Payment API (Replace this line with real API call later)
-                await simulatePaymentAPI(customerData, cart);
+                // 2. Create PensoPay payment and redirect to hosted payment page
+                const res = await fetch(CREATE_PAYMENT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cart, customerData, shippingDetails }),
+                });
 
-                // 3. Handle Success (Inventory & UI)
-                await finalizeOrder(cart, customerData);
+                const paymentData = await res.json();
 
-                cartContainer.innerHTML = `
-                    <div style="text-align: center; padding: 4rem 0;">
-                        <h2 style="font-family: var(--font-serif); margin-bottom: 1rem; font-size: 2rem;">${t('thank_you')}</h2>
-                        <p style="color: #666; margin-bottom: 2rem;">${t('order_received')}</p>
-                        <a href="products.html" class="btn-primary" style="width: auto; display: inline-flex;">${t('continue_shopping')}</a>
-                    </div>
-                `;
+                if (!res.ok || !paymentData.payment_link) {
+                    throw new Error(paymentData.error || 'Failed to create payment');
+                }
+
+                // Redirect customer to PensoPay's hosted payment page
+                window.location.href = paymentData.payment_link;
+
             } catch (error) {
                 console.error("Payment failed:", error);
                 alert(t('payment_error'));
@@ -634,54 +907,8 @@ function initCartPage() {
     renderCart();
 }
 
-/**
- * Simulate Payment API
- * This acts as a placeholder for Stripe/PayPal integration.
- */
-function simulatePaymentAPI(customerData, cart) {
-    return new Promise((resolve) => {
-        console.log("Processing payment for:", customerData);
-        console.log("Items:", cart);
-        
-        // Simulate network delay
-        setTimeout(() => {
-            resolve({ success: true, transactionId: 'TXN-' + Date.now() });
-        }, 1500);
-    });
-}
-
-/**
- * Finalize Order
- * Handles local inventory updates and clearing the cart.
- */
-async function finalizeOrder(cart, customerData) {
-    // 1. Save Order to Supabase
-    if (supabaseClient) {
-        const total = cart.reduce((sum, item) => sum + (item.priceValue * item.quantity), 0);
-        
-        // Insert the order record
-        await supabaseClient.from('orders').insert([{
-            email: customerData.email,
-            total: total,
-            items: cart,
-            customer_details: customerData
-        }]);
-
-        // 2. Update Stock in Supabase (Simple client-side decrement)
-        for (const item of cart) {
-            // We fetch the specific product first to ensure we have the latest stock count
-            const { data: product } = await supabaseClient.from('products').select('stockQuantity').eq('id', item.id).single();
-            
-            if (product) {
-                const newStock = Math.max(0, (product.stockQuantity || 0) - item.quantity);
-                await supabaseClient.from('products').update({ stockQuantity: newStock }).eq('id', item.id);
-            }
-        }
-    }
-
-    localStorage.removeItem('kolofon_cart');
-    updateCartCount();
-}
+// Payment and order finalization is now handled server-side by the payment-callback Edge Function.
+// The frontend redirects to PensoPay's hosted page, and the callback saves the order after payment confirmation.
 
 /**
  * Initialize Viewport Fix
@@ -763,7 +990,7 @@ function initContactPage() {
             contactForm.reset();
         } catch (error) {
             console.error("Error sending message:", error);
-            alert(t('payment_error'));
+            alert(t('contact_error'));
         } finally {
             btn.textContent = originalText;
             btn.disabled = false;
