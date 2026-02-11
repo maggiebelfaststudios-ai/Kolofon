@@ -464,10 +464,14 @@ textarea.form-input {
 .cart-item-image {
     width: 80px;
     height: 80px;
+    min-width: 80px;
     background-color: var(--color-bg-subtle);
     margin-right: 1rem;
-    background-size: cover;
-    background-position: center;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 .cart-item-details {
     flex: 1;

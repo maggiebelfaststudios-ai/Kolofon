@@ -523,7 +523,14 @@ async function initCarousel() {
     if (addToCartBtn) {
         addToCartBtn.addEventListener('click', () => {
             const product = products[currentIndex];
-            if (addToCart(product)) {
+            // Capture thumbnail from model-viewer before adding to cart
+            let thumbnail = null;
+            try {
+                thumbnail = viewer.toDataURL('image/webp', 0.7);
+            } catch (e) {
+                try { thumbnail = viewer.toDataURL('image/png'); } catch (_) {}
+            }
+            if (addToCart(product, thumbnail)) {
                 // Visual feedback
                 if (btnText && getComputedStyle(btnText).display !== 'none') {
                     const originalText = btnText.textContent;
@@ -546,9 +553,9 @@ async function initCarousel() {
 /**
  * Add Item to Cart (LocalStorage)
  */
-function addToCart(product) {
+function addToCart(product, thumbnail) {
     const stockQty = product.stockQuantity !== undefined ? product.stockQuantity : 0;
-    
+
     if (stockQty <= 0) {
         alert(t('out_of_stock_msg'));
         return false;
@@ -563,10 +570,11 @@ function addToCart(product) {
             return false;
         }
         existingItem.quantity += 1;
+        if (thumbnail && !existingItem.thumbnail) existingItem.thumbnail = thumbnail;
     } else {
         // Parse price to number for storage
-        const priceNum = typeof product.price === 'number' 
-            ? product.price 
+        const priceNum = typeof product.price === 'number'
+            ? product.price
             : parseFloat(String(product.price).replace(/[^0-9.,]/g, '').replace(',', '.'));
 
         cart.push({
@@ -576,6 +584,7 @@ function addToCart(product) {
             priceValue: isNaN(priceNum) ? 0 : priceNum,
             material: product.material,
             dimensions: product.dimensions,
+            thumbnail: thumbnail || null,
             quantity: 1
         });
     }
@@ -869,7 +878,10 @@ function initCartPage() {
             total += item.priceValue * item.quantity;
             html += `
                 <div class="cart-item">
-                    <div class="cart-item-image" style="background-color: #eee; display: flex; align-items: center; justify-content: center; color: #888; font-size: 0.7rem;">IMG</div> 
+                    <div class="cart-item-image">${item.thumbnail
+                        ? `<img src="${item.thumbnail}" alt="${item.title}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;">`
+                        : '<span style="color:#888;font-size:0.7rem;">IMG</span>'
+                    }</div>
                     <div class="cart-item-details">
                         <h3 class="cart-item-title">${item.title}</h3>
                         <p class="cart-item-price">${item.priceDisplay}</p>
