@@ -79,6 +79,8 @@ body {
 .spec-value { font-size: 0.9375rem; color: var(--color-text); font-weight: 500; }
 .nav-text-btn { background: none; border: none; font-family: inherit; font-size: 0.875rem; color: var(--color-text-muted); cursor: pointer; transition: color 0.2s; text-transform: uppercase; letter-spacing: 0.05em; }
 .nav-text-btn:hover { color: var(--color-text); }
+[data-theme="dark"] .nav-text-btn { color: #5b9bf7; }
+[data-theme="dark"] .nav-text-btn:hover { color: #89b8ff; }
 
 /* Viewer Base */
 .canvas-container { width: 100%; height: 100%; }
