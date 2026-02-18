@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/png" href="logo2.png">
+    <title>Kolofon</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="logo-container">
+            <a href="index.html"><img src="logo.png" alt="Kolofon" class="logo-img" style="height: 45px; display: block;"></a>
+        </div>
+        <div class="nav-right">
+            <a href="cart.html" class="icon-btn" aria-label="Shopping Bag">
+                <span class="cart-count-bubble" style="display: none;">0</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+            </a>
+            <button id="lang-btn" class="nav-text-btn" style="background:none; border:none; cursor:pointer; font-weight:500; margin-left:0.5rem; font-family: var(--font-sans);">EN</button>
+            <button id="theme-btn" class="icon-btn" aria-label="Toggle dark mode">
+                <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            </button>
+            <button class="icon-btn menu-toggle" aria-label="Menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+        </div>
+    </header>
+
+    <div class="mobile-menu-overlay">
+        <nav class="mobile-nav">
+            <a href="index.html" class="mobile-link" data-i18n="nav_home">Hjem</a>
+            <a href="products.html" class="mobile-link" data-i18n="nav_products">Produkter</a>
+            <a href="about.html" class="mobile-link" data-i18n="nav_about">Om os</a>
+            <a href="contact.html" class="mobile-link" data-i18n="nav_contact">Kontakt</a>
+        </nav>
+    </div>
+
+    <main class="content-page" style="max-width: 720px;">
+
+        <div id="privacy-da">
+            <h1 style="font-family: var(--font-serif); margin-bottom: 2rem;">Privatlivspolitik</h1>
+            <p style="color: var(--color-text-muted); margin-bottom: 2rem;">Sidst opdateret: Februar 2026</p>
+
+            <h2 style="font-size: 1.1rem; margin: 2rem 0 0.75rem;">1. Dataansvarlig</h2>
+            <p>Kolofon<br>Valmuevej 9, 1. 3., 7000 Fredericia<br>CVR: 40808914<br>Email: simon@kolofon.dk</p>
+
+            <h2 style="font-size: 1.1rem; margin: 2rem 0 0.75rem;">2. Hvilke oplysninger indsamler vi?</h2>
+            <p>Vi indsamler følgende personoplysninger, når du afgiver en ordre:</p>
+            <ul style="margin: 0.75rem 0 0.75rem 1.5rem; line-height: 2;">
+                <li>Fulde navn</li>
+                <li>E-mailadresse</li>
+                <li>Telefonnummer</li>
+                <li>Leveringsadresse (gade, by, postnummer)</li>
+                <li>Ordreoplysninger (produkter, beløb, forsendelsesmetode)</li>
+            </ul>
+            <p>Vi indsamler ikke oplysninger om betalingskort — dette håndteres udelukkende af vores betalingsudbyder PensoPay.</p>
+
+            <h2 style="font-size: 1.1rem; margin: 2rem 0 0.75rem;">3. Formål og retsgrundlag</h2>
+            <p>Vi behandler dine oplysninger for at kunne gennemføre og levere din ordre (GDPR artikel 6, stk. 1, litra b — opfyldelse af en kontrakt). Dine oplysninger bruges til:</p>
+            <ul style="margin: 0.75rem 0 0.75rem 1.5rem; line-height: 2;">
+                <li>Behandling og bekræftelse af din ordre</li>
+                <li>Forsendelse og levering via GLS</li>
+                <li>Udsendelse af ordre- og forsendelsesbekræftelse via e-mail</li>
+            </ul>
+
+            <h2 style="font-size: 1.1rem; margin: 2rem 0 0.75rem;">4. Databehandlere</h2>
+            <p>Vi deler dine oplysninger med følgende tredjeparter i det omfang, det er nødvendigt for at gennemføre din ordre:</p>
+            <ul style="margin: 0.75rem 0 0.75rem 1.5rem; line-height: 2;">
+                <li><strong>PensoPay</strong> — betalingsbehandling (modtager ordrebeløb og ordre-ID)</li>
+                <li><strong>Shipmondo</strong> — forsendelseshåndtering (modtager navn og leveringsadresse)</li>
+                <li><strong>Resend</strong> — e-mailudsendelse (modtager navn og e-mailadresse)</li>
+                <li><strong>Supabase</strong> — databasehosting (Dublin, Irland — EU)</li>
+            </ul>
+            <p>Alle databehandlere er underlagt databehandleraftaler og behandler udelukkende dine oplysninger efter vores instruks.</p>
+
+            <h2 style="font-size: 1.1rem; margin: 2rem 0 0.75rem;">5. Opbevaring</h2>
+            <p>Vi opbevarer dine ordreoplysninger i op til 5 år i overensstemmelse med bogføringsloven. Herefter slettes de.</p>
+
+            <h2 style="font-size: 1.1rem; margin: 2rem 0 0.75rem;">6. Cookies og lokal lagring</h2>
+            <p>Vi bruger ikke cookies. Vi anvender browserens lokale lagring (localStorage) udelukkende til at gemme din kurv, sprogpræference og temavalg. Disse data forlader aldrig din enhed og slettes automatisk, når din ordre er gennemført.</p>
+
+            <h2 style="font-size: 1.1rem; margin: 2rem 0 0.75rem;">7. Dine rettigheder</h2>
+            <p>Du har til enhver tid ret til:</p>
+            <ul style="margin: 0.75rem 0 0.75rem 1.5rem; line-height: 2;">
+                <li>At få indsigt i de oplysninger, vi har registreret om dig</li>
+                <li>At få berigtiget forkerte oplysninger</li>
+                <li>At få slettet dine oplysninger (med forbehold for bogføringslovens krav)</li>
+                <li>At gøre indsigelse mod behandlingen</li>
+            </ul>
+            <p>For at udøve dine rettigheder, kontakt os på <a href="mailto:simon@kolofon.dk" style="color: inherit;">simon@kolofon.dk</a>.</p>
+
+            <h2 style="font-size: 1.1rem; margin: 2rem 0 0.75rem;">8. Klage</h2>
+            <p>Hvis du ønsker at klage over vores behandling af dine personoplysninger, kan du kontakte Datatilsynet på <a href="https://www.datatilsynet.dk" target="_blank" style="color: inherit;">datatilsynet.dk</a>.</p>
+        </div>
+
+        <div id="privacy-en" style="display: none;">
+            <h1 style="font-family: var(--font-serif); margin-bottom: 2rem;">Privacy Policy</h1>
+            <p style="color: var(--color-text-muted); margin-bottom: 2rem;">Last updated: February 2026</p>
+
+            <h2 style="font-size: 1.1rem; margin: 2rem 0 0.75rem;">1. Data Controller</h2>
+            <p>Kolofon<br>Valmuevej 9, 1. 3., 7000 Fredericia, Denmark<br>CVR: 40808914<br>Email: simon@kolofon.dk</p>
+
+            <h2 style="font-size: 1.1rem; margin: 2rem 0 0.75rem;">2. What data do we collect?</h2>
+            <p>We collect the following personal data when you place an order:</p>
+            <ul style="margin: 0.75rem 0 0.75rem 1.5rem; line-height: 2;">
+                <li>Full name</li>
+                <li>Email address</li>
+                <li>Phone number</li>
+                <li>Delivery address (street, city, zip code)</li>
+                <li>Order details (products, amount, shipping method)</li>
+            </ul>
+            <p>We do not collect payment card details — this is handled exclusively by our payment provider PensoPay.</p>
+
+            <h2 style="font-size: 1.1rem; margin: 2rem 0 0.75rem;">3. Purpose and legal basis</h2>
+            <p>We process your data in order to fulfil and deliver your order (GDPR Article 6(1)(b) — performance of a contract). Your data is used to:</p>
+            <ul style="margin: 0.75rem 0 0.75rem 1.5rem; line-height: 2;">
+                <li>Process and confirm your order</li>
+                <li>Ship and deliver via GLS</li>
+                <li>Send order and shipping confirmation emails</li>
+            </ul>
+
+            <h2 style="font-size: 1.1rem; margin: 2rem 0 0.75rem;">4. Data Processors</h2>
+            <p>We share your data with the following third parties to the extent necessary to fulfil your order:</p>
+            <ul style="margin: 0.75rem 0 0.75rem 1.5rem; line-height: 2;">
+                <li><strong>PensoPay</strong> — payment processing (receives order amount and order ID)</li>
+                <li><strong>Shipmondo</strong> — shipping management (receives name and delivery address)</li>
+                <li><strong>Resend</strong> — email delivery (receives name and email address)</li>
+                <li><strong>Supabase</strong> — database hosting (Dublin, Ireland — EU)</li>
+            </ul>
+            <p>All data processors are bound by data processing agreements and process your data solely on our instructions.</p>
+
+            <h2 style="font-size: 1.1rem; margin: 2rem 0 0.75rem;">5. Retention</h2>
+            <p>We retain your order data for up to 5 years in accordance with Danish bookkeeping law. After this period, your data is deleted.</p>
+
+            <h2 style="font-size: 1.1rem; margin: 2rem 0 0.75rem;">6. Cookies and local storage</h2>
+            <p>We do not use cookies. We use browser local storage (localStorage) solely to save your cart, language preference and theme choice. This data never leaves your device and is automatically cleared when your order is completed.</p>
+
+            <h2 style="font-size: 1.1rem; margin: 2rem 0 0.75rem;">7. Your rights</h2>
+            <p>You have the right at any time to:</p>
+            <ul style="margin: 0.75rem 0 0.75rem 1.5rem; line-height: 2;">
+                <li>Access the data we hold about you</li>
+                <li>Have inaccurate data corrected</li>
+                <li>Have your data deleted (subject to bookkeeping law requirements)</li>
+                <li>Object to the processing of your data</li>
+            </ul>
+            <p>To exercise your rights, contact us at <a href="mailto:simon@kolofon.dk" style="color: inherit;">simon@kolofon.dk</a>.</p>
+
+            <h2 style="font-size: 1.1rem; margin: 2rem 0 0.75rem;">8. Complaints</h2>
+            <p>If you wish to complain about our processing of your personal data, you may contact the Danish Data Protection Agency at <a href="https://www.datatilsynet.dk" target="_blank" style="color: inherit;">datatilsynet.dk</a>.</p>
+        </div>
+
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4 data-i18n="footer_contact">Kontakt</h4>
+                <p>Valmuevej 9, 1. 3.</p>
+                <p>7000 Fredericia</p>
+                <p>CVR: 40808914</p>
+                <p><a href="mailto:simon@kolofon.dk">simon@kolofon.dk</a></p>
+            </div>
+            <div class="footer-section">
+                <h4 data-i18n="footer_legal">Juridisk</h4>
+                <a href="Handelsbetingelser.pdf" class="footer-link" target="_blank" data-i18n-link="terms">Handelsbetingelser</a>
+                <br>
+                <a href="privacy.html" class="footer-link" data-i18n-link="privacy">Privatlivspolitik</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; <span id="copyright-year">2026</span> Kolofon. <span data-i18n="footer_rights">Alle rettigheder forbeholdes.</span></p>
+        </div>
+    </footer>
+
+    <script>
+        // Switch privacy policy language to match site language
+        const lang = localStorage.getItem('kolofon_lang') || 'da';
+        if (lang === 'en') {
+            document.getElementById('privacy-da').style.display = 'none';
+            document.getElementById('privacy-en').style.display = 'block';
+        }
+    </script>
+    <script src="main.js" defer></script>
+</body>
+</html>

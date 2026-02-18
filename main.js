@@ -102,7 +102,12 @@ const TRANSLATIONS = {
         footer_follow: "Følg Os",
         footer_legal: "Juridisk",
         footer_terms: "Handelsbetingelser",
-        footer_rights: "Alle rettigheder forbeholdes."
+        footer_privacy: "Privatlivspolitik",
+        footer_rights: "Alle rettigheder forbeholdes.",
+        terms_agree: "Jeg accepterer",
+        terms_link: "handelsbetingelserne",
+        terms_and: "og",
+        privacy_link: "privatlivspolitikken"
     },
     en: {
         nav_home: "Home",
@@ -172,7 +177,12 @@ const TRANSLATIONS = {
         footer_follow: "Follow Us",
         footer_legal: "Legal",
         footer_terms: "Terms and Conditions",
+        footer_privacy: "Privacy Policy",
         footer_rights: "All rights reserved.",
+        terms_agree: "I agree to the",
+        terms_link: "terms and conditions",
+        terms_and: "and",
+        privacy_link: "privacy policy",
 
         // Product Descriptions (English overrides)
         desc_1770319091415: "A stringent and pattern-breaking interpretation of Orwell's timeless classic.",
@@ -691,6 +701,13 @@ function initCartPage() {
                         <div style="display:flex; justify-content:space-between; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: normal;"><span>${t('subtotal')}</span><span>DKK ${subtotal.toLocaleString('da-DK')}</span></div>
                         <div style="display:flex; justify-content:space-between; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: normal;"><span>${t('shipping')}</span><span id="shipping-display">DKK ${shippingCost}</span></div>
                         <div style="display:flex; justify-content:space-between; font-size: 1.25rem; font-weight: 500; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border);"><span>${t('total')}</span><span id="total-display">DKK ${(subtotal + shippingCost).toLocaleString('da-DK')}</span></div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer; font-size: 0.875rem; color: var(--color-text-muted); line-height: 1.5;">
+                            <input type="checkbox" id="terms-checkbox" required style="margin-top: 0.2rem; flex-shrink: 0;">
+                            <span>${t('terms_agree')} <a href="Handelsbetingelser.pdf" target="_blank" style="color: var(--color-text);">${t('terms_link')}</a> ${t('terms_and')} <a href="privacy.html" target="_blank" style="color: var(--color-text);">${t('privacy_link')}</a>.</span>
+                        </label>
                     </div>
 
                     <button type="submit" class="btn-primary full-width">${t('complete_purchase')}</button>
