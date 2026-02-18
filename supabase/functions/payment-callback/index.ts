@@ -37,9 +37,11 @@ Deno.serve(async (req: Request) => {
     const payload = JSON.parse(body);
     console.log('PensoPay callback received:', payload.event, 'payment:', payload.resource_id);
 
-    // Only process successful authorization or capture events
     const event = payload.event || '';
-    if (!event.includes('authorized') && !event.includes('captured')) {
+    const isAuthorized = event.includes('authorized');
+    const isCaptured = event.includes('captured');
+
+    if (!isAuthorized && !isCaptured) {
       console.log('Ignoring event:', event);
       return new Response('OK', { status: 200 });
     }
@@ -72,47 +74,74 @@ Deno.serve(async (req: Request) => {
     const subtotal = cart.reduce((sum: number, item: any) => sum + (item.priceValue * item.quantity), 0);
     const total = subtotal + (shippingDetails.cost || 0);
 
-    // Save order to database
-    const { error: orderError } = await supabase.from('orders').insert([{
-      email: customerData.email,
-      total: total,
-      items: cart,
-      status: 'new',
-      payment_status: event.includes('captured') ? 'captured' : 'authorized',
-      customer_details: { ...customerData, shipping: shippingDetails },
-      pensopay_id: resource.id?.toString(),
-      order_id: resource.order_id,
-    }]);
-
-    if (orderError) {
-      console.error('Failed to save order:', orderError);
-      return new Response('Database error', { status: 500 });
-    }
-
-    // Decrement stock
-    for (const item of cart) {
-      await supabase.rpc('decrement_stock', { row_id: item.id, quantity_sold: item.quantity });
-    }
-
-    console.log(`Order saved: ${resource.order_id}, total: ${total} DKK`);
-
-    // Send email notification to admin
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-    if (RESEND_API_KEY) {
-      const itemList = cart.map((item: any) => `${item.title} x${item.quantity} — DKK ${item.priceValue * item.quantity}`).join('\n');
-      await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${RESEND_API_KEY}`,
-        },
-        body: JSON.stringify({
-          from: 'Kolofon Orders <onboarding@resend.dev>',
-          to: 'simonlsamuelsen@gmail.com',
-          subject: `New order — ${resource.order_id} — DKK ${total}`,
-          text: `New order received!\n\nOrder ID: ${resource.order_id}\nCustomer: ${customerData.fullName} (${customerData.email})\nTotal: DKK ${total}\n\nItems:\n${itemList}\n\nShipping: ${shippingDetails.method === 'shop' ? `Pakkeshop — ${shippingDetails.servicePoint?.name}` : 'Hjemmelevering'}\n\nLog in to PensoPay to accept the payment.`,
-        }),
-      }).catch(err => console.error('Failed to send notification email:', err));
+    const itemList = cart.map((item: any) => `${item.title} x${item.quantity} — DKK ${item.priceValue * item.quantity}`).join('\n');
+    const shippingLabel = shippingDetails.method === 'shop'
+      ? `Pakkeshop — ${shippingDetails.servicePoint?.name}`
+      : 'Hjemmelevering';
+
+    if (isAuthorized) {
+      // Save order to database
+      const { error: orderError } = await supabase.from('orders').insert([{
+        email: customerData.email,
+        total: total,
+        items: cart,
+        status: 'new',
+        payment_status: 'authorized',
+        customer_details: { ...customerData, shipping: shippingDetails },
+        pensopay_id: resource.id?.toString(),
+        order_id: resource.order_id,
+      }]);
+
+      if (orderError) {
+        console.error('Failed to save order:', orderError);
+        return new Response('Database error', { status: 500 });
+      }
+
+      // Decrement stock
+      for (const item of cart) {
+        await supabase.rpc('decrement_stock', { row_id: item.id, quantity_sold: item.quantity });
+      }
+
+      console.log(`Order saved: ${resource.order_id}, total: ${total} DKK`);
+
+      // Notify admin
+      if (RESEND_API_KEY) {
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_API_KEY}` },
+          body: JSON.stringify({
+            from: 'Kolofon Orders <onboarding@resend.dev>',
+            to: 'simonlsamuelsen@gmail.com',
+            subject: `New order — ${resource.order_id} — DKK ${total}`,
+            text: `New order received!\n\nOrder ID: ${resource.order_id}\nCustomer: ${customerData.fullName} (${customerData.email})\nTotal: DKK ${total}\n\nItems:\n${itemList}\n\nShipping: ${shippingLabel}\n\nLog in to PensoPay to capture the payment.`,
+          }),
+        }).catch(err => console.error('Failed to send admin email:', err));
+      }
+    }
+
+    if (isCaptured) {
+      // Update order status in database
+      await supabase
+        .from('orders')
+        .update({ payment_status: 'captured' })
+        .eq('order_id', resource.order_id);
+
+      console.log(`Payment captured: ${resource.order_id}`);
+
+      // Send customer confirmation email
+      if (RESEND_API_KEY) {
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_API_KEY}` },
+          body: JSON.stringify({
+            from: 'Kolofon Orders <onboarding@resend.dev>',
+            to: customerData.email,
+            subject: `Ordrebekræftelse — ${resource.order_id}`,
+            text: `Hej ${customerData.fullName},\n\nTak for din ordre! Vi har modtaget din betaling og er i gang med at klargøre din forsendelse.\n\nOrdre ID: ${resource.order_id}\nTotal: DKK ${total}\n\nVarer:\n${itemList}\n\nLevering: ${shippingLabel}\n\nDu vil modtage en besked, når pakken er afsendt.\n\nMed venlig hilsen\nKolofon`,
+          }),
+        }).catch(err => console.error('Failed to send customer email:', err));
+      }
     }
 
     return new Response('OK', { status: 200 });
