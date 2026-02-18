@@ -138,6 +138,7 @@
                         <th>Kunde</th>
                         <th>Varer</th>
                         <th>Total</th>
+                        <th>Handling</th>
                     </tr>
                 </thead>
                 <tbody id="order-table-body">
@@ -245,9 +246,13 @@
             orders.forEach(order => {
                 const date = new Date(order.created_at).toLocaleString('da-DK');
                 const items = order.items.map(i => `${i.quantity}x ${i.title}`).join(', ');
-                const customer = order.customer_details ? 
-                    `<strong>${order.customer_details.fullName}</strong><br>${order.email}<br>${order.customer_details.address}, ${order.customer_details.city}` : 
+                const customer = order.customer_details ?
+                    `<strong>${order.customer_details.fullName}</strong><br>${order.email}<br>${order.customer_details.address}, ${order.customer_details.city}` :
                     order.email;
+
+                const shippedBtn = order.shipped_notification_sent
+                    ? `<span style="color: green; font-size: 0.85rem;">✓ Afsendt</span>`
+                    : `<button onclick="notifyShipped('${order.order_id}', this)" class="btn-primary" style="padding: 0.4rem 0.75rem; font-size: 0.75rem;">Marker afsendt</button>`;
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -255,9 +260,35 @@
                     <td style="vertical-align: top;">${customer}</td>
                     <td style="vertical-align: top;">${items}</td>
                     <td style="vertical-align: top;">DKK ${parseFloat(order.total).toLocaleString('da-DK')}</td>
+                    <td style="vertical-align: top;">${shippedBtn}</td>
                 `;
                 orderTableBody.appendChild(row);
             });
+        }
+
+        async function notifyShipped(orderId, btn) {
+            if (!confirm(`Send forsendelsesbesked til kunden for ordre ${orderId}?`)) return;
+            btn.disabled = true;
+            btn.textContent = 'Sender...';
+
+            const { data: { session } } = await client.auth.getSession();
+            const res = await fetch(`${supabaseUrl}/functions/v1/send-shipping-notification`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ order_id: orderId }),
+            });
+
+            if (res.ok) {
+                btn.parentElement.innerHTML = '<span style="color: green; font-size: 0.85rem;">✓ Afsendt</span>';
+            } else {
+                const err = await res.json();
+                alert('Fejl: ' + (err.error || 'Ukendt fejl'));
+                btn.disabled = false;
+                btn.textContent = 'Marker afsendt';
+            }
         }
 
         async function deleteProduct(id) {
