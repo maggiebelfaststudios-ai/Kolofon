@@ -366,6 +366,8 @@ async function initCarousel() {
     const stockEl = document.querySelector('.stock-status');
     const descEl = document.querySelector('.product-description');
     const specValues = document.querySelectorAll('.spec-value'); // [0] is Dimensions, [1] is Material
+    const photoEl = document.getElementById('product-photo');
+    const photoWrap = document.getElementById('product-photo-wrap');
     const prevBtn = document.querySelector('#prev-btn');
     const nextBtn = document.querySelector('#next-btn');
     const addToCartBtn = document.querySelector('.btn-add-to-cart');
@@ -466,10 +468,20 @@ async function initCarousel() {
 
             // Update Specs (Dimensions & Material)
             if (specValues.length >= 2) {
-                // We don't translate the values themselves (e.g. "24x36"), but we could translate labels if we selected them
-                // The labels are static in HTML, handled by data-i18n
                 specValues[0].textContent = product.dimensions;
                 specValues[1].textContent = product.material;
+            }
+
+            // Update product photo
+            if (photoEl && photoWrap) {
+                if (product.photo) {
+                    photoEl.src = product.photo;
+                    photoEl.alt = product.title;
+                    photoWrap.style.display = 'block';
+                } else {
+                    photoWrap.style.display = 'none';
+                    photoEl.src = '';
+                }
             }
         };
 
