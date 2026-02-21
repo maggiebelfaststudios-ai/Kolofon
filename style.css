@@ -357,23 +357,19 @@ model-viewer:active {
 }
 
 /* ===== HOME STAGE (video grid layout) ===== */
+
+/* Mobile: stack center elements, hide side panels */
 .home-stage {
     display: flex;
     flex-direction: column;
     min-height: calc(100dvh - var(--navbar-height));
 }
 
-.home-center-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+#home-video-1,
+#home-video-2 {
+    display: none;
 }
 
-/*
- * Each video panel is a flex column.
- * The video inside uses flex:1 to fill the panel's height —
- * no position:absolute needed, works reliably in both flex and grid parents.
- */
 .home-video-panel {
     overflow: hidden;
     background: #111;
@@ -389,13 +385,6 @@ model-viewer:active {
     filter: grayscale(100%);
 }
 
-/* Side panels hidden on mobile */
-#home-video-1,
-#home-video-2 {
-    display: none;
-}
-
-/* Top/bottom video panels on mobile: fixed height */
 #home-video-3,
 #home-video-4 {
     height: 30vw;
@@ -428,54 +417,69 @@ model-viewer:active {
     max-width: 480px;
 }
 
+/*
+ * Desktop: single flat CSS grid — all panels are direct grid children.
+ * Grid cells always have definite heights so videos fill them reliably.
+ *
+ *   col 1    | col 2    | col 3
+ *   video-1  | video-3  | video-2   row 1 (1fr)
+ *   video-1  | text     | video-2   row 2 (auto)
+ *   video-1  | video-4  | video-2   row 3 (1fr)
+ */
 @media (min-width: 1024px) {
     .home-stage {
-        flex-direction: row;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-rows: 1fr auto 1fr;
         height: calc(100dvh - var(--navbar-height));
         min-height: auto;
     }
 
-    /* Side panels: flex items that fill the stage height via stretch */
-    #home-video-1,
-    #home-video-2 {
+    #home-video-1 {
         display: flex;
-        flex: 1;
+        grid-column: 1;
+        grid-row: 1 / 4;
         border-right: 1px solid var(--color-border);
     }
 
-    #home-video-2 {
-        border-right: none;
-        border-left: 1px solid var(--color-border);
-    }
-
-    /*
-     * Center panel: grid with explicit height so 1fr rows are definitively sized.
-     * This is the key — without explicit height, 1fr rows collapse.
-     */
-    .home-center-panel {
-        flex: 1;
-        display: grid;
-        grid-template-rows: 1fr auto 1fr;
-        height: calc(100dvh - var(--navbar-height));
-        border-left: 1px solid var(--color-border);
-        border-right: 1px solid var(--color-border);
-    }
-
-    /* Reset mobile fixed heights — grid rows handle sizing on desktop */
-    #home-video-3,
-    #home-video-4 {
+    #home-video-3 {
+        display: flex;
+        grid-column: 2;
+        grid-row: 1;
         height: auto;
         min-height: 0;
+        border-left: 1px solid var(--color-border);
+        border-right: 1px solid var(--color-border);
+        border-bottom: 1px solid var(--color-border);
     }
 
-    #home-video-3 { border-bottom: 1px solid var(--color-border); }
-    #home-video-4 { border-top: 1px solid var(--color-border); }
-
     .home-text-panel {
+        grid-column: 2;
+        grid-row: 2;
         flex: unset;
         padding: 2.5rem 2rem;
+        border-left: 1px solid var(--color-border);
+        border-right: 1px solid var(--color-border);
         border-top: none;
         border-bottom: none;
+    }
+
+    #home-video-4 {
+        display: flex;
+        grid-column: 2;
+        grid-row: 3;
+        height: auto;
+        min-height: 0;
+        border-left: 1px solid var(--color-border);
+        border-right: 1px solid var(--color-border);
+        border-top: 1px solid var(--color-border);
+    }
+
+    #home-video-2 {
+        display: flex;
+        grid-column: 3;
+        grid-row: 1 / 4;
+        border-left: 1px solid var(--color-border);
     }
 }
 
