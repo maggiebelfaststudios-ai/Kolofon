@@ -495,9 +495,9 @@ model-viewer:active {
 
     /* Staggered fade-in: 3s initial delay, 3s gap between each panel, 2s duration */
     #home-video-1 { animation: home-fade-in 2s ease-in-out 3s  both; }
-    #home-video-2 { animation: home-fade-in 2s ease-in-out 6s  both; }
+    #home-video-4 { animation: home-fade-in 2s ease-in-out 6s  both; }
     #home-video-3 { animation: home-fade-in 2s ease-in-out 9s  both; }
-    #home-video-4 { animation: home-fade-in 2s ease-in-out 12s both; }
+    #home-video-2 { animation: home-fade-in 2s ease-in-out 12s both; }
 }
 
 /* ===== CONTENT PAGES (About, Contact, Account) ===== */
