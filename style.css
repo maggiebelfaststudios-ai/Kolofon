@@ -368,7 +368,6 @@ model-viewer:active {
     display: flex;
     flex-direction: column;
     height: calc(100dvh - var(--navbar-height));
-    overflow: hidden;
 }
 
 #home-video-1,
