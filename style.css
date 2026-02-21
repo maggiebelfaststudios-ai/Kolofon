@@ -442,6 +442,12 @@ model-viewer:active {
         border-right: 1px solid var(--color-border);
     }
 
+    #home-video-1 video {
+        object-position: 70% 50%;
+        transform: scale(1.15);
+        transform-origin: center center;
+    }
+
     #home-video-3 {
         display: flex;
         grid-column: 2;
