@@ -358,6 +358,11 @@ model-viewer:active {
 
 /* ===== HOME STAGE (video grid layout) ===== */
 
+@keyframes home-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
 /* Mobile: stack center elements, hide side panels */
 .home-stage {
     display: flex;
@@ -487,6 +492,12 @@ model-viewer:active {
         grid-row: 1 / 4;
         border-left: 1px solid var(--color-border);
     }
+
+    /* Staggered fade-in: 2s duration, 1s gap between each panel */
+    #home-video-1 { animation: home-fade-in 2s ease-in-out 0s both; }
+    #home-video-2 { animation: home-fade-in 2s ease-in-out 1s both; }
+    #home-video-3 { animation: home-fade-in 2s ease-in-out 2s both; }
+    #home-video-4 { animation: home-fade-in 2s ease-in-out 3s both; }
 }
 
 /* ===== CONTENT PAGES (About, Contact, Account) ===== */
