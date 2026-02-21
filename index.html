@@ -43,16 +43,43 @@
     </div>
 
     <!-- Main Content -->
-    <main class="content-page" style="text-align: center; justify-content: center;">
-        <h1 data-i18n="index_title">Velkommen til Kolofon.</h1>
-        <p data-i18n="index_text">Vi forvandler digital præcision til fysisk nærvær og skaber premium akrylvægkunst, der ikke bare observeres, men opleves.</p>
-        
-        <div class="slider-container" id="explore-slider">
-            <div class="slider-text" data-i18n="slider_text">Swipe for at Udforske</div>
-            <div class="slider-thumb">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-            </div>
+    <main class="home-stage">
+
+        <!-- Video 1 — left panel -->
+        <div class="home-video-panel" id="home-video-1">
+            <video autoplay loop muted playsinline>
+                <source src="video_material/1.mp4" type="video/mp4">
+            </video>
         </div>
+
+        <!-- Center column: video 3 / text / video 4 -->
+        <div class="home-center-panel">
+
+            <div class="home-video-panel" id="home-video-3">
+                <video autoplay loop muted playsinline>
+                    <source src="video_material/3.mp4" type="video/mp4">
+                </video>
+            </div>
+
+            <div class="home-text-panel">
+                <h1 data-i18n="index_title">Velkommen til Kolofon.</h1>
+                <p data-i18n="index_text">Vi forvandler digital præcision til fysisk nærvær og skaber premium akrylvægkunst, der ikke bare observeres, men opleves.</p>
+                <div class="slider-container" id="explore-slider">
+                    <div class="slider-text" data-i18n="slider_text">Swipe for at Udforske</div>
+                    <div class="slider-thumb">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video 4 — placeholder until file is added -->
+            <div class="home-video-panel" id="home-video-4"></div>
+
+        </div>
+
+        <!-- Video 2 — right panel, placeholder until file is added -->
+        <div class="home-video-panel" id="home-video-2"></div>
+
     </main>
 
     <!-- Footer -->
