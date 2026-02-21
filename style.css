@@ -446,30 +446,29 @@ model-viewer:active {
         border-left: 1px solid var(--color-border);
     }
 
+    /* Center panel: CSS grid gives cells definite heights — more reliable than flex column */
     .home-center-panel {
         flex: 1;
-        height: 100%;
+        display: grid;
+        grid-template-rows: 1fr auto 1fr;
         border-left: 1px solid var(--color-border);
         border-right: 1px solid var(--color-border);
     }
 
-    /* Top/bottom video panels: fill remaining space in center column */
+    /* Reset mobile fixed heights; grid rows handle sizing */
     #home-video-3,
     #home-video-4 {
-        flex: 1;
         height: auto;
         min-height: 0;
-        border-bottom: 1px solid var(--color-border);
     }
 
-    #home-video-4 {
-        border-bottom: none;
-        border-top: 1px solid var(--color-border);
-    }
+    #home-video-3 { border-bottom: 1px solid var(--color-border); }
+    #home-video-4 { border-top: 1px solid var(--color-border); }
 
     .home-text-panel {
-        flex: 0 0 auto;
         padding: 2.5rem 2rem;
+        border-top: none;
+        border-bottom: none;
     }
 }
 
