@@ -16,7 +16,31 @@ document.addEventListener('DOMContentLoaded', () => {
     initFooterYear();
     initContactPage();
     preloadModels();
+    initHomeVideos();
 });
+
+function initHomeVideos() {
+    const panels = document.querySelectorAll('.home-video-panel video');
+    if (!panels.length) return;
+
+    panels.forEach(video => {
+        video.muted = true;
+        video.playsInline = true;
+        const promise = video.play();
+        if (promise !== undefined) {
+            promise.catch(() => {
+                // Autoplay blocked — retry on first user interaction
+                const resume = () => {
+                    video.play();
+                    document.removeEventListener('touchstart', resume);
+                    document.removeEventListener('click', resume);
+                };
+                document.addEventListener('touchstart', resume, { once: true });
+                document.addEventListener('click', resume, { once: true });
+            });
+        }
+    });
+}
 
 // --- SUPABASE CONFIGURATION ---
 // Initialize globally so it can be used by Carousel, Cart, and Checkout
