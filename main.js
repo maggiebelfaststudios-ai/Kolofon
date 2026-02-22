@@ -26,14 +26,21 @@ function initHomeVideos() {
     panels.forEach(video => {
         video.muted = true;
         video.playsInline = true;
+        video.preload = 'auto';
+
+        // Keep video invisible until it actually starts playing
+        // so the native play-button overlay never shows
+        video.style.opacity = '0';
+        video.addEventListener('playing', () => {
+            video.style.opacity = '1';
+        }, { once: true });
+
         const promise = video.play();
         if (promise !== undefined) {
             promise.catch(() => {
                 // Autoplay blocked — retry on first user interaction
                 const resume = () => {
                     video.play();
-                    document.removeEventListener('touchstart', resume);
-                    document.removeEventListener('click', resume);
                 };
                 document.addEventListener('touchstart', resume, { once: true });
                 document.addEventListener('click', resume, { once: true });
