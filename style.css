@@ -366,9 +366,7 @@ model-viewer:active {
 }
 
 #home-video-1,
-#home-video-2,
-#home-video-3,
-#home-video-4 {
+#home-video-2 {
     display: none;
 }
 
@@ -409,11 +407,6 @@ model-viewer:active {
     display: none !important;
 }
 
-#home-video-3,
-#home-video-4 {
-    height: 30vw;
-    min-height: 160px;
-}
 
 .home-text-panel {
     flex: 1;
