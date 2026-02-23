@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initHomeVideos() {
-    const panels = document.querySelectorAll('.home-video-panel video');
+    const panels = document.querySelectorAll('.home-video-panel video, .text-panel-bg-video');
     if (!panels.length) return;
 
     panels.forEach(video => {

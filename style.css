@@ -366,7 +366,8 @@ model-viewer:active {
 }
 
 #home-video-1,
-#home-video-2 {
+#home-video-2,
+#home-video-4 {
     display: none;
 }
 
@@ -415,6 +416,8 @@ model-viewer:active {
 
 .home-text-panel {
     flex: 1;
+    position: relative;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -425,17 +428,46 @@ model-viewer:active {
     border-bottom: 1px solid var(--color-border);
 }
 
+/* Dark overlay so text stays readable over the video */
+.home-text-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1;
+}
+
+/* Background video for mobile text panel */
+.text-panel-bg-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(100%);
+    z-index: 0;
+    transition: opacity 0.3s ease;
+}
+
+/* Text content floats above video + overlay */
+.home-text-panel h1,
+.home-text-panel p,
+.home-text-panel .slider-container {
+    position: relative;
+    z-index: 2;
+}
+
 .home-text-panel h1 {
     font-family: var(--font-serif);
     font-size: clamp(1.8rem, 4vw, 2.8rem);
     margin-bottom: 1rem;
-    color: var(--color-text);
+    color: #ffffff;
 }
 
 .home-text-panel p {
     margin-bottom: 1.5rem;
     line-height: 1.6;
-    color: var(--color-text-muted);
+    color: rgba(255, 255, 255, 0.8);
     max-width: 480px;
 }
 
@@ -491,6 +523,12 @@ model-viewer:active {
         border-top: none;
         border-bottom: none;
     }
+
+    /* On desktop: hide the bg video and overlay, restore normal text colors */
+    .text-panel-bg-video { display: none; }
+    .home-text-panel::before { display: none; }
+    .home-text-panel h1 { color: var(--color-text); }
+    .home-text-panel p { color: var(--color-text-muted); }
 
     #home-video-4 {
         display: flex;
