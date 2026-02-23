@@ -491,7 +491,6 @@ model-viewer:active {
         display: flex;
         grid-column: 1;
         grid-row: 1;
-        border-right: 1px solid var(--color-border);
     }
 
     #home-video-1 video {
@@ -505,10 +504,7 @@ model-viewer:active {
         grid-row: 1;
         flex: unset;
         padding: 2.5rem 2rem;
-        border-left: 1px solid var(--color-border);
-        border-right: 1px solid var(--color-border);
-        border-top: none;
-        border-bottom: none;
+        border: none;
     }
 
     /* On desktop: hide the bg video and overlay, restore normal text colors */
@@ -521,7 +517,6 @@ model-viewer:active {
         display: flex;
         grid-column: 3;
         grid-row: 1;
-        border-left: 1px solid var(--color-border);
     }
 
 }
