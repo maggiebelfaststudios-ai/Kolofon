@@ -530,10 +530,14 @@ async function initCarousel() {
                     videoEl.muted = true;
                     videoEl.load();
                     videoEl.play().catch(() => {});
+                    // Remove photo's negative bottom margin so video appears below, not overlapping
+                    if (photoWrap) photoWrap.style.marginBottom = '0';
                 } else {
                     videoWrap.style.display = 'none';
                     videoEl.pause();
                     videoEl.src = '';
+                    // Restore photo's edge-to-edge bottom margin
+                    if (photoWrap) photoWrap.style.marginBottom = '';
                 }
             }
         };
