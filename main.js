@@ -33,6 +33,9 @@ function initHomeVideos() {
         video.style.opacity = '0';
         video.addEventListener('playing', () => {
             video.style.opacity = '1';
+            if (video.classList.contains('text-panel-bg-video')) {
+                video.closest('.home-text-panel').classList.add('video-playing');
+            }
         }, { once: true });
 
         const promise = video.play();

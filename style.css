@@ -418,17 +418,24 @@ model-viewer:active {
     justify-content: center;
     text-align: center;
     padding: 2.5rem 1.5rem;
+    background: var(--color-bg);
     border-top: 1px solid var(--color-border);
     border-bottom: 1px solid var(--color-border);
 }
 
-/* Dark overlay so text stays readable over the video */
+/* Dark overlay — fades in with the video */
 .home-text-panel::before {
     content: '';
     position: absolute;
     inset: 0;
     background: rgba(0, 0, 0, 0.45);
     z-index: 1;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+.home-text-panel.video-playing::before {
+    opacity: 1;
 }
 
 /* Background video for mobile text panel */
