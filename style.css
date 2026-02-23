@@ -382,7 +382,8 @@ model-viewer:active {
     flex-direction: column;
 }
 
-.home-video-panel video {
+.home-video-panel video,
+.home-video-panel img {
     flex: 1;
     min-height: 0;
     width: 100%;
