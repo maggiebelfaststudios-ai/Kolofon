@@ -400,10 +400,12 @@ model-viewer:active {
 }
 
 /* Hide native browser play button overlay on mobile */
-.home-video-panel video::-webkit-media-controls {
+.home-video-panel video::-webkit-media-controls,
+.text-panel-bg-video::-webkit-media-controls {
     display: none !important;
 }
-.home-video-panel video::-webkit-media-controls-start-playback-button {
+.home-video-panel video::-webkit-media-controls-start-playback-button,
+.text-panel-bg-video::-webkit-media-controls-start-playback-button {
     display: none !important;
 }
 

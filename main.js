@@ -20,35 +20,45 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initHomeVideos() {
-    const panels = document.querySelectorAll('.home-video-panel video, .text-panel-bg-video');
-    if (!panels.length) return;
+    const videos = document.querySelectorAll('.home-video-panel video, .text-panel-bg-video');
+    if (!videos.length) return;
 
-    panels.forEach(video => {
+    videos.forEach(video => {
         video.muted = true;
         video.playsInline = true;
-        video.preload = 'auto';
-
-        // Keep video invisible until it actually starts playing
-        // so the native play-button overlay never shows
+        video.loop = true;
         video.style.opacity = '0';
-        video.addEventListener('playing', () => {
+
+        const reveal = () => {
             video.style.opacity = '1';
             if (video.classList.contains('text-panel-bg-video')) {
                 video.closest('.home-text-panel').classList.add('video-playing');
             }
-        }, { once: true });
+        };
 
-        const promise = video.play();
-        if (promise !== undefined) {
-            promise.catch(() => {
-                // Autoplay blocked — retry on first user interaction
-                const resume = () => {
-                    video.play();
-                };
-                document.addEventListener('touchstart', resume, { once: true });
-                document.addEventListener('click', resume, { once: true });
-            });
+        // Attach listener before tryPlay so it catches the playing event
+        video.addEventListener('playing', reveal, { once: true });
+
+        // HTML autoplay may have already started the video before JS ran
+        if (!video.paused) {
+            reveal();
+            return;
         }
+
+        const tryPlay = () => {
+            video.muted = true;
+            const p = video.play();
+            if (p !== undefined) {
+                p.catch(() => {
+                    // Autoplay blocked — retry on first user interaction
+                    const resume = () => tryPlay();
+                    document.addEventListener('touchstart', resume, { once: true });
+                    document.addEventListener('click', resume, { once: true });
+                });
+            }
+        };
+
+        tryPlay();
     });
 }
 
