@@ -404,6 +404,8 @@ async function initCarousel() {
     const specValues = document.querySelectorAll('.spec-value'); // [0] is Dimensions, [1] is Material
     const photoEl = document.getElementById('product-photo');
     const photoWrap = document.getElementById('product-photo-wrap');
+    const videoEl = document.getElementById('product-video');
+    const videoWrap = document.getElementById('product-video-wrap');
     const prevBtn = document.querySelector('#prev-btn');
     const nextBtn = document.querySelector('#next-btn');
     const addToCartBtn = document.querySelector('.btn-add-to-cart');
@@ -517,6 +519,21 @@ async function initCarousel() {
                 } else {
                     photoWrap.style.display = 'none';
                     photoEl.src = '';
+                }
+            }
+
+            // Update product video
+            if (videoEl && videoWrap) {
+                if (product.video) {
+                    videoEl.src = product.video;
+                    videoWrap.style.display = 'block';
+                    videoEl.muted = true;
+                    videoEl.load();
+                    videoEl.play().catch(() => {});
+                } else {
+                    videoWrap.style.display = 'none';
+                    videoEl.pause();
+                    videoEl.src = '';
                 }
             }
         };

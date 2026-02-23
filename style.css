@@ -335,6 +335,8 @@ model-viewer:active {
     .details-content { max-width: 480px; margin: 0 auto; width: 100%; }
     #product-photo-wrap { flex: 1; min-height: 0; margin-top: 0; margin-left: -4rem; margin-right: -4rem; margin-bottom: -4rem; }
     #product-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+    #product-video-wrap { margin-left: -4rem; margin-right: -4rem; margin-bottom: -4rem; flex-shrink: 0; }
+    #product-video { width: 100%; display: block; aspect-ratio: 16 / 9; object-fit: cover; }
     
     /* Reset action area and button for desktop */
     .action-area {
