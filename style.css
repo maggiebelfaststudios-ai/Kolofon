@@ -425,8 +425,24 @@ model-viewer:active {
     border-bottom: 1px solid var(--color-border);
 }
 
-/* Dark overlay — fades in with the video */
+/*
+ * Two-layer overlay system:
+ * ::before = solid cover (theme bg colour) — visible during loading, fades out when video plays
+ * ::after  = dark tint — invisible during loading, fades in when video plays
+ * The video itself is always visible so Chrome does not treat it as hidden and block autoplay.
+ */
 .home-text-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--color-bg);
+    z-index: 1;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+}
+
+.home-text-panel::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -434,11 +450,11 @@ model-viewer:active {
     z-index: 1;
     opacity: 0;
     transition: opacity 0.5s ease;
+    pointer-events: none;
 }
 
-.home-text-panel.video-playing::before {
-    opacity: 1;
-}
+.home-text-panel.video-playing::before { opacity: 0; }
+.home-text-panel.video-playing::after  { opacity: 1; }
 
 /* Background video for mobile text panel */
 .text-panel-bg-video {
@@ -449,10 +465,9 @@ model-viewer:active {
     object-fit: cover;
     filter: grayscale(100%);
     z-index: 0;
-    transition: opacity 0.3s ease;
 }
 
-/* Text content floats above video + overlay */
+/* Text content floats above overlays */
 .home-text-panel h1,
 .home-text-panel p,
 .home-text-panel .slider-container {
@@ -464,14 +479,22 @@ model-viewer:active {
     font-family: var(--font-serif);
     font-size: clamp(1.8rem, 4vw, 2.8rem);
     margin-bottom: 1rem;
-    color: #ffffff;
+    color: var(--color-text);
+    transition: color 0.4s ease;
 }
 
 .home-text-panel p {
     margin-bottom: 1.5rem;
     line-height: 1.6;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--color-text-muted);
     max-width: 480px;
+    transition: color 0.4s ease;
+}
+
+/* Switch to white text once the dark tint is showing */
+@media (max-width: 1023px) {
+    .home-text-panel.video-playing h1 { color: #ffffff; }
+    .home-text-panel.video-playing p  { color: rgba(255, 255, 255, 0.8); }
 }
 
 /*
@@ -509,11 +532,10 @@ model-viewer:active {
         border: none;
     }
 
-    /* On desktop: hide the bg video and overlay, restore normal text colors */
+    /* On desktop: hide the bg video and both overlays */
     .text-panel-bg-video { display: none; }
     .home-text-panel::before { display: none; }
-    .home-text-panel h1 { color: var(--color-text); }
-    .home-text-panel p { color: var(--color-text-muted); }
+    .home-text-panel::after  { display: none; }
 
     #home-video-2 {
         display: flex;

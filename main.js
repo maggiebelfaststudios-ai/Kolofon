@@ -20,46 +20,38 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initHomeVideos() {
-    const videos = document.querySelectorAll('.home-video-panel video, .text-panel-bg-video');
-    if (!videos.length) return;
+    const video = document.querySelector('.text-panel-bg-video');
+    if (!video) return;
 
-    videos.forEach(video => {
+    video.muted = true;
+    video.playsInline = true;
+    video.loop = true;
+
+    // Do NOT hide the video with opacity — Chrome may block autoplay on hidden elements.
+    // Instead, CSS overlays (::before cover + ::after tint) handle the loading state.
+    const reveal = () => {
+        video.closest('.home-text-panel').classList.add('video-playing');
+    };
+
+    // HTML autoplay may have already started the video before JS ran
+    if (!video.paused) {
+        reveal();
+        return;
+    }
+
+    video.addEventListener('playing', reveal, { once: true });
+
+    const tryPlay = () => {
         video.muted = true;
-        video.playsInline = true;
-        video.loop = true;
-        video.style.opacity = '0';
+        video.play().catch(() => {
+            // Autoplay blocked — retry on first user interaction
+            const resume = () => tryPlay();
+            document.addEventListener('touchstart', resume, { once: true });
+            document.addEventListener('click', resume, { once: true });
+        });
+    };
 
-        const reveal = () => {
-            video.style.opacity = '1';
-            if (video.classList.contains('text-panel-bg-video')) {
-                video.closest('.home-text-panel').classList.add('video-playing');
-            }
-        };
-
-        // Attach listener before tryPlay so it catches the playing event
-        video.addEventListener('playing', reveal, { once: true });
-
-        // HTML autoplay may have already started the video before JS ran
-        if (!video.paused) {
-            reveal();
-            return;
-        }
-
-        const tryPlay = () => {
-            video.muted = true;
-            const p = video.play();
-            if (p !== undefined) {
-                p.catch(() => {
-                    // Autoplay blocked — retry on first user interaction
-                    const resume = () => tryPlay();
-                    document.addEventListener('touchstart', resume, { once: true });
-                    document.addEventListener('click', resume, { once: true });
-                });
-            }
-        };
-
-        tryPlay();
-    });
+    tryPlay();
 }
 
 // --- SUPABASE CONFIGURATION ---
