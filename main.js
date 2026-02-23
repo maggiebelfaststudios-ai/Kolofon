@@ -530,14 +530,24 @@ async function initCarousel() {
                     videoEl.muted = true;
                     videoEl.load();
                     videoEl.play().catch(() => {});
-                    // Remove photo's negative bottom margin so video appears below, not overlapping
-                    if (photoWrap) photoWrap.style.marginBottom = '0';
+                    // When video and photo are both shown, flex:1 on the photo fills the
+                    // entire column leaving the video in overflow and negative margins cause
+                    // visual overlap. Fix: collapse photo to a fixed height.
+                    if (photoWrap) {
+                        photoWrap.style.flex = 'none';
+                        photoWrap.style.height = '280px';
+                        photoWrap.style.marginBottom = '0';
+                    }
                 } else {
                     videoWrap.style.display = 'none';
                     videoEl.pause();
                     videoEl.src = '';
-                    // Restore photo's edge-to-edge bottom margin
-                    if (photoWrap) photoWrap.style.marginBottom = '';
+                    // Restore photo's full-height flex layout
+                    if (photoWrap) {
+                        photoWrap.style.flex = '';
+                        photoWrap.style.height = '';
+                        photoWrap.style.marginBottom = '';
+                    }
                 }
             }
         };
