@@ -510,43 +510,31 @@ async function initCarousel() {
                 specValues[1].textContent = product.material;
             }
 
-            // Update product photo
-            if (photoEl && photoWrap) {
-                if (product.photo) {
-                    photoEl.src = product.photo;
-                    photoEl.alt = product.title;
-                    photoWrap.style.display = 'block';
-                } else {
-                    photoWrap.style.display = 'none';
-                    photoEl.src = '';
-                }
-            }
-
-            // Update product video
+            // Update product photo / video
+            // If the product has a video, it replaces the photo entirely.
             if (videoEl && videoWrap) {
                 if (product.video) {
+                    // Show video in place of photo
+                    if (photoWrap) photoWrap.style.display = 'none';
                     videoEl.src = product.video;
                     videoWrap.style.display = 'block';
                     videoEl.muted = true;
                     videoEl.load();
                     videoEl.play().catch(() => {});
-                    // When video and photo are both shown, flex:1 on the photo fills the
-                    // entire column leaving the video in overflow and negative margins cause
-                    // visual overlap. Fix: collapse photo to a fixed height.
-                    if (photoWrap) {
-                        photoWrap.style.flex = 'none';
-                        photoWrap.style.height = '280px';
-                        photoWrap.style.marginBottom = '0';
-                    }
                 } else {
+                    // No video — show photo as normal
                     videoWrap.style.display = 'none';
                     videoEl.pause();
                     videoEl.src = '';
-                    // Restore photo's full-height flex layout
-                    if (photoWrap) {
-                        photoWrap.style.flex = '';
-                        photoWrap.style.height = '';
-                        photoWrap.style.marginBottom = '';
+                    if (photoEl && photoWrap) {
+                        if (product.photo) {
+                            photoEl.src = product.photo;
+                            photoEl.alt = product.title;
+                            photoWrap.style.display = 'block';
+                        } else {
+                            photoWrap.style.display = 'none';
+                            photoEl.src = '';
+                        }
                     }
                 }
             }
