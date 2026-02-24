@@ -321,6 +321,28 @@ model-viewer:active {
 .btn-add-to-cart .btn-icon { display: inline-flex; }
 .btn-icon { display: none; }
 
+/* Product page photo / video — mobile base styles */
+#product-photo-wrap,
+#product-video-wrap {
+    width: 100%;
+    margin-top: 1.5rem;
+}
+
+#product-photo {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    display: block;
+}
+
+#product-video {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    display: block;
+    object-fit: cover;
+    filter: grayscale(100%);
+}
+
 /* ===== DESKTOP SCALING (Min-Width) ===== */
 @media (min-width: 1024px) {
     .navbar { padding: 0 3rem; }
