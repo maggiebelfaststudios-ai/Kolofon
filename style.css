@@ -246,7 +246,7 @@ body {
 
     /* Close the information block off from the blueprint area below it */
     .details-content {
-        padding-bottom: 2rem;
+        padding-bottom: 1.5rem;
         border-bottom: 1px solid var(--color-border);
     }
 }
@@ -314,7 +314,7 @@ body {
 .product-author { font-size: 1.1rem; color: var(--color-text-muted); margin-bottom: 0; font-style: italic; }
 
 /* Title and author on the left, price and stock aligned right alongside them */
-.product-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--color-border); }
+.product-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--color-border); }
 .product-header-text { min-width: 0; }
 .product-price-row { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; flex-shrink: 0; }
 .price { font-size: 1.5rem; font-weight: 500; }
@@ -323,7 +323,7 @@ body {
 .product-description { font-size: 1rem; line-height: 1.6; color: var(--color-text-muted); margin-bottom: 2rem; }
 .product-description:empty { display: none; }
 
-.specs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
+.specs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
 .spec-label { font-size: 0.75rem; text-transform: uppercase; color: #888; margin-bottom: 0.25rem; }
 .spec-value { font-weight: 500; }
 
