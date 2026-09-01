@@ -232,13 +232,22 @@ body {
     border-top: 1px solid var(--color-border);
 }
 
-/* Mobile: give the details column enough height for the whole blueprint to
-   show, instead of cover cropping it to a thin slice. The blueprints are
-   A4-proportioned (1191x1684), so a full-width column needs about 1.41x its
-   width. The page just scrolls further. Desktop is already tall enough. */
+/* Mobile: stack the page as three blocks - photo, then the product
+   information on its own, then the blueprint below it rather than behind
+   it. padding-bottom reserves a full-width area for the drawing, and
+   anchoring the background to the bottom drops it into exactly that space.
+   142vw covers the blueprints A4 proportions (1191x1684) at full width. */
 @media (max-width: 1023px) {
     .details-column {
-        min-height: 141vw;
+        padding-bottom: 142vw;
+        background-position: bottom center;
+        background-size: 100% auto;
+    }
+
+    /* Close the information block off from the blueprint area below it */
+    .details-content {
+        padding-bottom: 2rem;
+        border-bottom: 1px solid var(--color-border);
     }
 }
 
