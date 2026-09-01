@@ -421,6 +421,22 @@ body {
     .btn-add-to-cart .btn-icon { display: none; }
 
     .product-title { font-size: 3rem; }
+
+    /* Desktop: the information is its own box floating over the blueprint,
+       rather than sitting above it as it does on mobile. Centring the
+       column places the box over the middle of the drawing. */
+    .details-column { justify-content: center; }
+    .info-box {
+        width: 100%;
+        max-width: 480px;
+        margin: 0 auto;
+        padding: 2.5rem;
+        background: var(--color-bg);
+        border: 1px solid var(--color-border);
+    }
+    /* The box now owns the width and centring these two used to set */
+    .info-box .details-content { max-width: none; margin: 0; }
+    .info-box .action-area { max-width: none; margin: 1.5rem 0 0; }
 }
 
 /* ===== HOME STAGE (video grid layout) ===== */
