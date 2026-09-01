@@ -350,8 +350,11 @@
                 // If editing, identify the old file to delete later
                 if (editingProductId) {
                     const oldProduct = products.find(p => p.id === editingProductId);
-                        if (oldProduct && oldProduct.photo && oldProduct.photo.includes('/images/')) {
-                            oldFileNameToDelete = oldProduct.photo.split('/images/').pop();
+                    if (oldProduct && oldProduct.photo && oldProduct.photo.includes('/images/')) {
+                        oldFileNameToDelete = oldProduct.photo.split('/images/').pop();
+                    }
+                }
+
                 const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '-')}`; // Clean filename
                 console.log(`Attempting to upload file: ${fileName}`);
                 const { data: uploadData, error: uploadError } = await client.storage.from('images').upload(fileName, file);
