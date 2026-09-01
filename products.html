@@ -48,6 +48,9 @@
                         <div id="image-loader" class="image-loader" style="display:none;">
                             <div class="loader-spinner"></div>
                         </div>
+                        <button class="fullscreen-btn" id="fullscreen-btn" aria-label="Vis billede i fuld skærm">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"></path><path d="M21 8V5a2 2 0 0 0-2-2h-3"></path><path d="M16 21h3a2 2 0 0 0 2-2v-3"></path><path d="M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                        </button>
                     </div>
                 </div>
 
@@ -126,6 +129,14 @@
             <p>&copy; <span id="copyright-year">2026</span> Kolofon. <span data-i18n="footer_rights">Alle rettigheder forbeholdes.</span></p>
         </div>
     </footer>
+
+    <!-- Full screen image viewer -->
+    <div id="image-lightbox" class="image-lightbox" hidden>
+        <button class="lightbox-close" id="lightbox-close" aria-label="Luk fuld skærm">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+        <img id="lightbox-image" src="" alt="">
+    </div>
 
     <script src="main.js" defer></script>
 </body>

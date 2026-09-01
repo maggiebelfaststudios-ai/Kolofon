@@ -194,6 +194,66 @@ body {
 }
 
 /* Carousel Controls */
+/* Full screen trigger, sat in the corner of the image panel */
+.fullscreen-btn {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 10;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+.fullscreen-btn:hover { transform: scale(1.1); background: #FFFFFF; }
+
+/* Full screen viewer. A plain overlay rather than the browser Fullscreen
+   API, which iOS Safari does not support for anything but video - there
+   the button would simply do nothing. */
+.image-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.92);
+}
+/* display: flex above would otherwise beat the browser default for [hidden] */
+.image-lightbox[hidden] { display: none; }
+.image-lightbox img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+}
+.lightbox-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    color: #FFFFFF;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+.lightbox-close:hover { background: rgba(255, 255, 255, 0.3); }
+
 .carousel-controls {
     position: absolute;
     top: 50%;

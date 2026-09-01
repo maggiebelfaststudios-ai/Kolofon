@@ -15,7 +15,48 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCartCount();
     initFooterYear();
     initHomeVideos();
+    initImageLightbox();
 });
+
+/**
+ * Full screen product image viewer.
+ * Uses an overlay rather than element.requestFullscreen(), which iOS Safari
+ * only supports for video - the button would be dead on iPhones otherwise.
+ */
+function initImageLightbox() {
+    const openBtn = document.getElementById('fullscreen-btn');
+    const lightbox = document.getElementById('image-lightbox');
+    const lightboxImg = document.getElementById('lightbox-image');
+    const closeBtn = document.getElementById('lightbox-close');
+    const mainImg = document.getElementById('product-image-main');
+    if (!openBtn || !lightbox || !lightboxImg || !closeBtn || !mainImg) return;
+
+    const open = () => {
+        if (!mainImg.src) return; // nothing loaded yet
+        lightboxImg.src = mainImg.src;
+        lightboxImg.alt = mainImg.alt || '';
+        lightbox.hidden = false;
+        document.body.style.overflow = 'hidden';
+    };
+
+    const close = () => {
+        lightbox.hidden = true;
+        lightboxImg.src = '';
+        document.body.style.overflow = '';
+    };
+
+    openBtn.addEventListener('click', open);
+    closeBtn.addEventListener('click', close);
+
+    // Tapping the backdrop closes; tapping the image itself does not
+    lightbox.addEventListener('click', (e) => {
+        if (e.target !== lightboxImg) close();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !lightbox.hidden) close();
+    });
+}
 
 function initHomeVideos() {
     const video = document.querySelector('.text-panel-bg-video');
