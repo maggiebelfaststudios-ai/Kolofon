@@ -116,7 +116,7 @@ const TRANSLATIONS = {
         nav_contact: "Kontakt",
         index_title: "Velkommen til Kolofon.",
         index_text: "Vi forvandler digital præcision til fysisk nærvær og skaber premium akrylvægkunst, der ikke bare observeres, men opleves.",
-        slider_text: "Swipe for at Udforske",
+        slider_text: "swipe for guds skyld",
         cart_title: "Din Kurv",
         cart_empty: "Din kurv er tom.",
         cart_browse: "Se Kollektion",
