@@ -358,6 +358,7 @@ async function initCarousel() {
     const btnText = addToCartBtn ? addToCartBtn.querySelector('.btn-text') : null;
     const detailsContent = document.querySelector('.details-content');
     const imageLoader = document.querySelector('#image-loader');
+    const carouselMain = document.querySelector('.image-carousel-main');
 
     if (!imageMainEl || !prevBtn || !nextBtn) return;
 
@@ -478,6 +479,14 @@ async function initCarousel() {
         const updateDOM = () => {
             titleEl.textContent = product.title;
             if (authorEl) authorEl.textContent = product.author ? `by ${product.author}` : '';
+
+            // Per-product background blueprint. Clearing it falls back to the
+            // plain panel colour, so products without one look unchanged.
+            if (carouselMain) {
+                carouselMain.style.backgroundImage = product.background
+                    ? `url("${product.background}")`
+                    : '';
+            }
             
             // Format price: DKK 2.000 (Currency followed by sum, with dot separator)
             const priceNum = typeof product.price === 'number' 

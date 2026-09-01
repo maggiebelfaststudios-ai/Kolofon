@@ -183,6 +183,11 @@ body {
     position: relative;
     overflow: hidden;
     background: var(--color-bg-subtle);
+    /* Per-product blueprint, set from main.js. The colour above stays
+       visible as the fallback when a product has no background. */
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
 }
 
 .carousel-image {
