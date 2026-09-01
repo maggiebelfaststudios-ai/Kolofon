@@ -358,7 +358,7 @@ async function initCarousel() {
     const btnText = addToCartBtn ? addToCartBtn.querySelector('.btn-text') : null;
     const detailsContent = document.querySelector('.details-content');
     const imageLoader = document.querySelector('#image-loader');
-    const carouselMain = document.querySelector('.image-carousel-main');
+    const detailsColumn = document.querySelector('.details-column');
 
     if (!imageMainEl || !prevBtn || !nextBtn) return;
 
@@ -482,8 +482,8 @@ async function initCarousel() {
 
             // Per-product background blueprint. Clearing it falls back to the
             // plain panel colour, so products without one look unchanged.
-            if (carouselMain) {
-                carouselMain.style.backgroundImage = product.background
+            if (detailsColumn) {
+                detailsColumn.style.backgroundImage = product.background
                     ? `url("${product.background}")`
                     : '';
             }
