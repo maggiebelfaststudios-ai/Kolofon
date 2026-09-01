@@ -1,0 +1,11 @@
+# Files kept in git but NOT published to the website.
+#
+# Vercel serves the repo root as static files, so anything committed here is
+# otherwise downloadable at https://www.kolofon.dk/<path>. These files belong
+# in version control as documentation, but nothing on the site loads them.
+
+# Database setup scripts - run by hand in the Supabase SQL editor
+*.sql
+
+# Edge function source - deployed to Supabase via its own CLI, never by Vercel
+supabase/
