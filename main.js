@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     updateCartCount();
     initFooterYear();
-    initContactPage();
     initHomeVideos();
 });
 
@@ -1047,48 +1046,6 @@ function initFooterYear() {
     }
 }
 
-/**
- * Initialize Contact Page
- * Handles contact form submission.
- */
-function initContactPage() {
-    const contactForm = document.getElementById('contact-form');
-    if (!contactForm) return;
-
-    contactForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = contactForm.querySelector('button[type="submit"]');
-        const originalText = btn.textContent;
-
-        btn.textContent = t('processing');
-        btn.disabled = true;
-
-        const formData = new FormData(contactForm);
-        const submission = Object.fromEntries(formData.entries());
-
-        try {
-            if (supabaseClient) {
-                const { error } = await supabaseClient
-                    .from('contact_messages')
-                    .insert([{
-                        full_name: submission.name,
-                        email: submission.email,
-                        message: submission.message
-                    }]);
-                if (error) throw error;
-            }
-
-            alert(t('contact_success'));
-            contactForm.reset();
-        } catch (error) {
-            console.error("Error sending message:", error);
-            alert(t('contact_error'));
-        } finally {
-            btn.textContent = originalText;
-            btn.disabled = false;
-        }
-    });
-}
 
 /**
  * Initialize Interactive Slider
