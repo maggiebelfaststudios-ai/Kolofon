@@ -602,7 +602,7 @@ body {
 .home-text-panel.video-playing::before { opacity: 0; }
 .home-text-panel.video-playing::after  { opacity: 1; }
 
-/* Background video for mobile text panel */
+/* Background video behind the centre text panel, on every screen size */
 .text-panel-bg-video {
     position: absolute;
     inset: 0;
@@ -653,11 +653,6 @@ body {
         padding: 2.5rem 2rem;
         border: none;
     }
-
-    /* On desktop: hide the bg video and both overlays */
-    .text-panel-bg-video { display: none; }
-    .home-text-panel::before { display: none; }
-    .home-text-panel::after  { display: none; }
 
     #home-video-2 {
         display: flex;
