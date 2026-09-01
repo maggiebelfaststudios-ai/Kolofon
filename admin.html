@@ -104,8 +104,8 @@
                             <input type="number" id="new-stock" class="form-input" placeholder="Antal enheder" value="1" min="0" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">GLB Fil (3D Model)</label>
-                            <input type="file" id="new-file" class="form-input" accept=".glb" required>
+                            <label class="form-label">Produktbillede</label>
+                            <input type="file" id="new-file" class="form-input" accept=".jpg,.jpeg,.png,.webp" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Materiale</label>
@@ -304,7 +304,7 @@
             // 2. Delete file from Storage (if it exists and is in our bucket)
             if (product && product.src && product.src.includes('/models/')) {
                 const fileName = product.src.split('/models/').pop();
-                const { error: storageError } = await client.storage.from('models').remove([fileName]);
+                const { error: storageError } = await client.storage.from('images').remove([fileName]);
                 if (storageError) console.error('Fejl ved sletning af fil:', storageError);
             }
 
@@ -350,14 +350,11 @@
                 // If editing, identify the old file to delete later
                 if (editingProductId) {
                     const oldProduct = products.find(p => p.id === editingProductId);
-                    if (oldProduct && oldProduct.src && oldProduct.src.includes('/models/')) {
-                        oldFileNameToDelete = oldProduct.src.split('/models/').pop();
-                    }
-                }
-
+                        if (oldProduct && oldProduct.photo && oldProduct.photo.includes('/images/')) {
+                            oldFileNameToDelete = oldProduct.photo.split('/images/').pop();
                 const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '-')}`; // Clean filename
                 console.log(`Attempting to upload file: ${fileName}`);
-                const { data: uploadData, error: uploadError } = await client.storage.from('models').upload(fileName, file);
+                const { data: uploadData, error: uploadError } = await client.storage.from('images').upload(fileName, file);
 
                 if (uploadError) {
                     console.error("Upload failed:", uploadError);
@@ -368,7 +365,7 @@
                 }
 
                 newFileNameUploaded = fileName;
-                const { data: { publicUrl: url } } = client.storage.from('models').getPublicUrl(fileName);
+                const { data: { publicUrl: url } } = client.storage.from('images').getPublicUrl(fileName);
                 console.log("File uploaded successfully. Public URL:", url);
                 publicUrl = url;
             }
@@ -385,7 +382,7 @@
             };
 
             if (publicUrl) {
-                productData.src = publicUrl;
+                productData.photo = publicUrl;
             }
 
             let error = null;
@@ -406,7 +403,7 @@
             if (error) {
                 // If DB update failed but we uploaded a file, delete the new file to prevent orphans
                 if (newFileNameUploaded) {
-                    await client.storage.from('models').remove([newFileNameUploaded]);
+                    await client.storage.from('images').remove([newFileNameUploaded]);
                 }
                 console.error('Supabase Error:', error);
                 alert('Fejl: ' + error.message);
@@ -415,7 +412,7 @@
                 // If DB update succeeded and we replaced a file, delete the old file
                 if (oldFileNameToDelete) {
                     console.log(`Deleting old file: ${oldFileNameToDelete}`);
-                    await client.storage.from('models').remove([oldFileNameToDelete]);
+                    await client.storage.from('images').remove([oldFileNameToDelete]);
                 }
                 alert(editingProductId ? 'Produkt opdateret!' : 'Produkt gemt i Supabase!');
                 resetFormState();

@@ -7,8 +7,6 @@
     <link rel="icon" type="image/png" href="logo2.png">
     <title>Kolofon</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Google Model Viewer for 3D visualization -->
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -48,29 +46,22 @@
     <main>
         <section id="products" class="product-layout">
             <div class="viewer-column">
-                <!-- 3D Model Viewer -->
-                <model-viewer
-                    id="product-viewer"
-                    src=""
-                    alt="Premium Acrylic Wall Art"
-                    camera-controls
-                    touch-action="pan-y"
-                    interaction-prompt="auto"
-                    camera-orbit="0deg 75deg auto"
-                    orientation="0deg -5deg 0deg"
-                    min-camera-orbit="auto 75deg auto"
-                    max-camera-orbit="auto 75deg auto"
-                    shadow-intensity="1"
-                    environment-image="studio_small_02_2k.hdr"
-                    exposure="1.5"
-                    tone-mapping="commerce"
-                    >
-                </model-viewer>
-                <div id="model-loader" class="model-loader" style="display:none;">
-                    <div class="model-spinner"></div>
+                <!-- Image Carousel -->
+                <div class="image-carousel-container">
+                    <div class="image-carousel-main">
+                        <img id="product-image-main" src="" alt="Product Image" class="carousel-image">
+                        <div id="image-loader" class="image-loader" style="display:none;">
+                            <div class="loader-spinner"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Image Thumbnails -->
+                    <div class="image-thumbnails">
+                        <div id="thumbnails-track" class="thumbnails-track"></div>
+                    </div>
                 </div>
 
-                <!-- Carousel Controls -->
+                <!-- Carousel Controls (for switching products) -->
                 <div class="carousel-controls">
                     <button class="carousel-btn" id="prev-btn" aria-label="Previous Product">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
@@ -139,52 +130,5 @@
     </footer>
 
     <script src="main.js" defer></script>
-    <script>
-    (function() {
-        const viewer = document.getElementById('product-viewer');
-        if (!viewer) return;
-
-        const BASE_THETA = 0;
-        const PHI = 75;
-        const SWING = 35;
-        const CYCLE_DURATION = 16000;
-
-        let animId = null;
-        let userInteracting = false;
-        let startTime = null;
-
-        function animate(time) {
-            if (!startTime) startTime = time;
-
-            if (!userInteracting) {
-                const elapsed = time - startTime;
-                const t = (elapsed % CYCLE_DURATION) / CYCLE_DURATION;
-                const angle = SWING * Math.sin(t * 2 * Math.PI);
-                viewer.cameraOrbit = `${BASE_THETA + angle}deg ${PHI}deg auto`;
-            }
-            animId = requestAnimationFrame(animate);
-        }
-
-        viewer.addEventListener('camera-change', (e) => {
-            if (e.detail.source === 'user-interaction') {
-                userInteracting = true;
-            }
-        });
-
-        function snapBack() {
-            userInteracting = false;
-            startTime = null;
-            viewer.cameraOrbit = `${BASE_THETA}deg ${PHI}deg auto`;
-        }
-
-        viewer.addEventListener('mouseup', snapBack);
-        viewer.addEventListener('touchend', snapBack);
-        viewer.addEventListener('pointerup', snapBack);
-
-        viewer.addEventListener('load', () => {
-            animId = requestAnimationFrame(animate);
-        });
-    })();
-    </script>
 </body>
 </html>

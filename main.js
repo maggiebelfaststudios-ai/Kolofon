@@ -15,7 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCartCount();
     initFooterYear();
     initContactPage();
-    preloadModels();
     initHomeVideos();
 });
 
@@ -375,44 +374,29 @@ function updateCartCount() {
     });
 }
 
-/**
- * Preload 3D model files into browser cache on non-product pages.
- */
-function preloadModels() {
-    if (document.querySelector('#product-viewer')) return;
-    if (!supabaseClient) return;
 
-    supabaseClient.from('products').select('src').then(({ data }) => {
-        if (!data) return;
-        data.forEach(p => {
-            if (p.src) fetch(p.src, { mode: 'cors' }).catch(() => {});
-        });
-    });
-}
 
 /**
  * Initialize Carousel Logic
- * Handles switching between 3D models and updating product details.
+ * Handles switching between products with image carousel and updating product details.
  */
 async function initCarousel() {
-    const viewer = document.querySelector('#product-viewer');
+    const imageMainEl = document.querySelector('#product-image-main');
+    const thumbnailsTrack = document.querySelector('#thumbnails-track');
     const titleEl = document.querySelector('#product-title');
     const authorEl = document.querySelector('#product-author');
     const priceEl = document.querySelector('#product-price');
     const stockEl = document.querySelector('.stock-status');
     const descEl = document.querySelector('.product-description');
     const specValues = document.querySelectorAll('.spec-value'); // [0] is Dimensions, [1] is Material
-    const photoEl = document.getElementById('product-photo');
-    const photoWrap = document.getElementById('product-photo-wrap');
-    const videoEl = document.getElementById('product-video');
-    const videoWrap = document.getElementById('product-video-wrap');
     const prevBtn = document.querySelector('#prev-btn');
     const nextBtn = document.querySelector('#next-btn');
     const addToCartBtn = document.querySelector('.btn-add-to-cart');
     const btnText = addToCartBtn ? addToCartBtn.querySelector('.btn-text') : null;
     const detailsContent = document.querySelector('.details-content');
+    const imageLoader = document.querySelector('#image-loader');
 
-    if (!viewer || !prevBtn || !nextBtn) return;
+    if (!imageMainEl || !prevBtn || !nextBtn) return;
 
     let products = [];
 
@@ -442,31 +426,93 @@ async function initCarousel() {
         return;
     }
 
-    let currentIndex = 0;
+    let currentProductIndex = 0;
+    let currentImageIndex = 0;
 
-    // Preload all other models into browser cache
-    products.forEach((p, i) => {
-        if (i !== 0 && p.src) fetch(p.src, { mode: 'cors' }).catch(() => {});
-    });
-
-    // On mobile, reset the camera to the initial position after the user stops interacting.
-    const resetCameraOnMobile = () => {
-        // The breakpoint for desktop is 1024px in style.css
-        if (window.innerWidth < 1024) {
-            viewer.cameraOrbit = '0deg 75deg 95%';
-            viewer.cameraTarget = 'auto auto auto';
-            viewer.fieldOfView = 'auto';
+    // Parse product images (JSON array stored in 'images' field, or fallback to 'photo' field)
+    const getProductImages = (product) => {
+        const images = [];
+        
+        // Try to parse 'images' field (JSON array)
+        if (product.images) {
+            try {
+                const parsed = typeof product.images === 'string' ? JSON.parse(product.images) : product.images;
+                if (Array.isArray(parsed)) {
+                    images.push(...parsed.filter(img => img));
+                }
+            } catch (e) {
+                console.warn('Failed to parse images for product', product.id, e);
+            }
         }
+        
+        // Fallback to 'photo' field
+        if (images.length === 0 && product.photo) {
+            images.push(product.photo);
+        }
+
+        return images.length > 0 ? images : [''];
     };
 
-    viewer.addEventListener('touchend', resetCameraOnMobile);
+    const renderThumbnails = (product) => {
+        const images = getProductImages(product);
+        thumbnailsTrack.innerHTML = '';
+        
+        images.forEach((imageUrl, idx) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `thumbnail-btn ${idx === 0 ? 'active' : ''}`;
+            btn.setAttribute('aria-label', `Image ${idx + 1}`);
+            
+            if (imageUrl) {
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = `Product image ${idx + 1}`;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                btn.appendChild(img);
+            } else {
+                btn.textContent = '📷';
+                btn.style.fontSize = '1.5rem';
+                btn.style.display = 'flex';
+                btn.style.alignItems = 'center';
+                btn.style.justifyContent = 'center';
+            }
+            
+            btn.addEventListener('click', () => {
+                currentImageIndex = idx;
+                updateImage();
+            });
+            
+            thumbnailsTrack.appendChild(btn);
+        });
+    };
+
+    const updateImage = () => {
+        const product = products[currentProductIndex];
+        const images = getProductImages(product);
+        const imageUrl = images[currentImageIndex] || '';
+
+        if (imageUrl) {
+            imageMainEl.src = imageUrl;
+            imageMainEl.style.opacity = '1';
+        } else {
+            imageMainEl.src = '';
+            imageMainEl.style.opacity = '0.5';
+        }
+
+        // Update thumbnail highlights
+        const thumbnails = thumbnailsTrack.querySelectorAll('.thumbnail-btn');
+        thumbnails.forEach((thumb, idx) => {
+            thumb.classList.toggle('active', idx === currentImageIndex);
+        });
+    };
 
     const updateProduct = (index, direction = null) => {
         const product = products[index];
+        currentImageIndex = 0;
         
         const updateDOM = () => {
-            viewer.src = product.src;
-            viewer.cameraOrbit = '0deg 75deg 95%';
             titleEl.textContent = product.title;
             if (authorEl) authorEl.textContent = product.author ? `by ${product.author}` : '';
             
@@ -510,37 +556,10 @@ async function initCarousel() {
                 specValues[1].textContent = product.material;
             }
 
-            // Update product photo / video
-            // If the product has a video, it replaces the photo entirely.
-            if (videoEl && videoWrap) {
-                if (product.video) {
-                    // Show video in place of photo
-                    if (photoWrap) photoWrap.style.display = 'none';
-                    videoEl.src = product.video;
-                    videoWrap.style.display = 'block';
-                    videoEl.muted = true;
-                    videoEl.load();
-                    videoEl.play().catch(() => {});
-                } else {
-                    // No video — show photo as normal
-                    videoWrap.style.display = 'none';
-                    videoEl.pause();
-                    videoEl.src = '';
-                    if (photoEl && photoWrap) {
-                        if (product.photo) {
-                            photoEl.src = product.photo;
-                            photoEl.alt = product.title;
-                            photoWrap.style.display = 'block';
-                        } else {
-                            photoWrap.style.display = 'none';
-                            photoEl.src = '';
-                        }
-                    }
-                }
-            }
+            // Render thumbnails and update image
+            renderThumbnails(product);
+            updateImage();
         };
-
-        const loader = document.getElementById('model-loader');
 
         if (direction) {
             prevBtn.disabled = true;
@@ -548,49 +567,44 @@ async function initCarousel() {
 
             const enterClass = direction === 'next' ? 'viewer-enter-right' : 'viewer-enter-left';
 
-            // Immediately hide the old model and show spinner
+            // Immediately hide the old image and show spinner
             if (detailsContent) detailsContent.classList.add('fade-out');
-            viewer.style.visibility = 'hidden';
-            viewer.style.opacity = '0';
-            if (loader) loader.style.display = '';
+            imageMainEl.style.opacity = '0';
+            if (imageLoader) imageLoader.style.display = '';
 
             updateDOM();
 
-            const onLoaded = () => {
-                viewer.removeEventListener('load', onLoaded);
-
-                // Hide spinner
-                if (loader) loader.style.display = 'none';
+            // Simulate loading delay for animation
+            setTimeout(() => {
+                if (imageLoader) imageLoader.style.display = 'none';
 
                 // Prepare for entry
-                viewer.style.transition = 'none';
-                viewer.classList.add(enterClass);
-                viewer.style.visibility = '';
-                viewer.style.opacity = '';
-                void viewer.offsetWidth;
+                imageMainEl.style.transition = 'none';
+                imageMainEl.classList.add(enterClass);
+                imageMainEl.style.opacity = '';
+                void imageMainEl.offsetWidth;
 
                 // Animate in
-                viewer.style.transition = '';
-                viewer.classList.remove(enterClass);
+                imageMainEl.style.transition = '';
+                imageMainEl.classList.remove(enterClass);
                 if (detailsContent) detailsContent.classList.remove('fade-out');
 
                 prevBtn.disabled = false;
                 nextBtn.disabled = false;
-            };
-            viewer.addEventListener('load', onLoaded);
+            }, 100);
         } else {
             updateDOM();
         }
     };
 
     prevBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex - 1 + products.length) % products.length;
-        updateProduct(currentIndex, 'prev');
+        currentProductIndex = (currentProductIndex - 1 + products.length) % products.length;
+        updateProduct(currentProductIndex, 'prev');
     });
 
     nextBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex + 1) % products.length;
-        updateProduct(currentIndex, 'next');
+        currentProductIndex = (currentProductIndex + 1) % products.length;
+        updateProduct(currentProductIndex, 'next');
     });
 
     // Initialize with the first product
@@ -599,14 +613,11 @@ async function initCarousel() {
     // Add to Cart Logic
     if (addToCartBtn) {
         addToCartBtn.addEventListener('click', () => {
-            const product = products[currentIndex];
-            // Capture thumbnail from model-viewer before adding to cart
-            let thumbnail = null;
-            try {
-                thumbnail = viewer.toDataURL('image/webp', 0.7);
-            } catch (e) {
-                try { thumbnail = viewer.toDataURL('image/png'); } catch (_) {}
-            }
+            const product = products[currentProductIndex];
+            // Use current image as thumbnail
+            const images = getProductImages(product);
+            const thumbnail = images[currentImageIndex] || null;
+            
             if (addToCart(product, thumbnail)) {
                 // Visual feedback
                 if (btnText && getComputedStyle(btnText).display !== 'none') {
