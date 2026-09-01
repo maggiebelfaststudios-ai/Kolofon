@@ -225,7 +225,8 @@ const TRANSLATIONS = {
     }
 };
 
-let currentLang = localStorage.getItem('kolofon_lang') || 'da';
+// Danish only - the language switcher was removed.
+const currentLang = 'da';
 
 function t(key, params = {}) {
     let text = TRANSLATIONS[currentLang][key] || key;
@@ -300,27 +301,10 @@ function initNavigation() {
 }
 
 /**
- * Initialize Language Logic
+ * Apply Danish text to static elements.
+ * The language switcher was removed - the site is Danish only.
  */
 function initLanguage() {
-    const langBtn = document.getElementById('lang-btn');
-    if (!langBtn) return;
-
-    // Set initial button text (If current is DA, button shows EN to switch, and vice versa)
-    langBtn.textContent = currentLang === 'da' ? 'EN' : 'DA';
-
-    langBtn.addEventListener('click', () => {
-        const newLang = currentLang === 'da' ? 'en' : 'da';
-        localStorage.setItem('kolofon_lang', newLang);
-        
-        // Fade out and reload to apply changes cleanly
-        document.body.classList.add('page-fade-out');
-        setTimeout(() => {
-            window.location.href = window.location.pathname; // More robust reload than location.reload()
-        }, 400);
-    });
-    
-    // Apply translations to static elements
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (TRANSLATIONS[currentLang][key]) {
@@ -328,40 +312,20 @@ function initLanguage() {
         }
     });
 
-    // Handle language-specific links (e.g., terms page)
     document.querySelectorAll('[data-i18n-link="terms"]').forEach(el => {
         el.textContent = t('footer_terms');
     });
 }
 
 /**
- * Initialize Theme (Dark/Light Mode) Toggle
+ * Force light mode.
+ * The dark-mode toggle was removed, so this also clears any preference a
+ * returning visitor saved earlier - otherwise they would be stuck in dark.
  */
 function initTheme() {
-    const themeBtn = document.getElementById('theme-btn');
-    if (!themeBtn) return;
-
-    const moonIcon = themeBtn.querySelector('.icon-moon');
-    const sunIcon = themeBtn.querySelector('.icon-sun');
-
-    function applyTheme(theme) {
-        document.documentElement.setAttribute('data-theme', theme);
-        if (moonIcon && sunIcon) {
-            moonIcon.style.display = theme === 'dark' ? 'none' : '';
-            sunIcon.style.display = theme === 'dark' ? '' : 'none';
-        }
-    }
-
-    // Apply saved preference (or default to light)
-    const savedTheme = localStorage.getItem('kolofon_theme') || 'light';
-    applyTheme(savedTheme);
-
-    themeBtn.addEventListener('click', () => {
-        const current = document.documentElement.getAttribute('data-theme') || 'light';
-        const next = current === 'dark' ? 'light' : 'dark';
-        localStorage.setItem('kolofon_theme', next);
-        applyTheme(next);
-    });
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.removeItem('kolofon_theme');
+    localStorage.removeItem('kolofon_lang');
 }
 
 function updateCartCount() {
@@ -538,16 +502,6 @@ async function initCarousel() {
             
             // Update Description
             let descriptionText = product.description;
-            if (currentLang === 'en') {
-                // 1. Check for description_en in database
-                if (product.description_en) {
-                    descriptionText = product.description_en;
-                }
-                // 2. Fallback to hardcoded JS object (legacy support)
-                else if (TRANSLATIONS.en[`desc_${product.id}`]) {
-                    descriptionText = TRANSLATIONS.en[`desc_${product.id}`];
-                }
-            }
             if (descEl) descEl.textContent = descriptionText;
 
             // Update Specs (Dimensions & Material)
