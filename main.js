@@ -345,7 +345,6 @@ function updateCartCount() {
  */
 async function initCarousel() {
     const imageMainEl = document.querySelector('#product-image-main');
-    const thumbnailsTrack = document.querySelector('#thumbnails-track');
     const titleEl = document.querySelector('#product-title');
     const authorEl = document.querySelector('#product-author');
     const priceEl = document.querySelector('#product-price');
@@ -417,41 +416,6 @@ async function initCarousel() {
         return images.length > 0 ? images : [''];
     };
 
-    const renderThumbnails = (product) => {
-        const images = getProductImages(product);
-        thumbnailsTrack.innerHTML = '';
-        
-        images.forEach((imageUrl, idx) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = `thumbnail-btn ${idx === 0 ? 'active' : ''}`;
-            btn.setAttribute('aria-label', `Image ${idx + 1}`);
-            
-            if (imageUrl) {
-                const img = document.createElement('img');
-                img.src = imageUrl;
-                img.alt = `Product image ${idx + 1}`;
-                img.style.width = '100%';
-                img.style.height = '100%';
-                img.style.objectFit = 'cover';
-                btn.appendChild(img);
-            } else {
-                btn.textContent = '📷';
-                btn.style.fontSize = '1.5rem';
-                btn.style.display = 'flex';
-                btn.style.alignItems = 'center';
-                btn.style.justifyContent = 'center';
-            }
-            
-            btn.addEventListener('click', () => {
-                currentImageIndex = idx;
-                updateImage();
-            });
-            
-            thumbnailsTrack.appendChild(btn);
-        });
-    };
-
     const updateImage = () => {
         const product = products[currentProductIndex];
         const images = getProductImages(product);
@@ -464,12 +428,6 @@ async function initCarousel() {
             imageMainEl.src = '';
             imageMainEl.style.opacity = '0.5';
         }
-
-        // Update thumbnail highlights
-        const thumbnails = thumbnailsTrack.querySelectorAll('.thumbnail-btn');
-        thumbnails.forEach((thumb, idx) => {
-            thumb.classList.toggle('active', idx === currentImageIndex);
-        });
     };
 
     const updateProduct = (index, direction = null) => {
@@ -518,8 +476,7 @@ async function initCarousel() {
                 specValues[1].textContent = product.material;
             }
 
-            // Render thumbnails and update image
-            renderThumbnails(product);
+            // Update the main image
             updateImage();
         };
 
