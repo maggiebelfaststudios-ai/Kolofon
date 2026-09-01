@@ -232,6 +232,16 @@ body {
     border-top: 1px solid var(--color-border);
 }
 
+/* Mobile: give the details column enough height for the whole blueprint to
+   show, instead of cover cropping it to a thin slice. The blueprints are
+   A4-proportioned (1191x1684), so a full-width column needs about 1.41x its
+   width. The page just scrolls further. Desktop is already tall enough. */
+@media (max-width: 1023px) {
+    .details-column {
+        min-height: 141vw;
+    }
+}
+
 .details-content {
     transition: opacity 0.3s ease, transform 0.3s ease;
     opacity: 1;
