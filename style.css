@@ -191,13 +191,22 @@ body {
 
 /* Video slides sit in the same box as the photos and match their fit */
 .carousel-video {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: contain;
     display: block;
     transition: opacity 0.4s ease, transform 0.4s ease;
 }
-.carousel-image[hidden], .carousel-video[hidden] { display: none; }
+/* The inactive frame stays laid out and simply fades. Using display:none
+   here left an instant where neither photo nor video was painted, which
+   showed as a flash of the panel colour behind them. */
+.carousel-image[hidden], .carousel-video[hidden] {
+    display: block;
+    opacity: 0;
+    pointer-events: none;
+}
 
 /* Gallery position dots. Only rendered when a product has more than one
    slide, so single-image products look untouched. */
@@ -231,6 +240,8 @@ body {
 }
 
 .carousel-image {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: contain;

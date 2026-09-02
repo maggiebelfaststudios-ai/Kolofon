@@ -536,7 +536,9 @@ async function initCarousel() {
             }
             imageMainEl.hidden = false;
             imageMainEl.src = slide.url || '';
-            imageMainEl.style.opacity = slide.url ? '1' : '0.5';
+            // No inline opacity: it would outrank the [hidden] rule and leave
+            // the photo showing on top of the video
+            imageMainEl.style.opacity = '';
             animateSlide(imageMainEl, direction);
         }
 
