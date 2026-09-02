@@ -113,6 +113,15 @@
                             <small id="background-status" style="color: #666; display: block; margin-top: 0.35rem;">Valgfrit — vises som baggrund på produktsiden.</small>
                         </div>
                         <div class="form-group">
+                            <label class="form-label">Video</label>
+                            <input type="file" id="new-video" class="form-input" accept=".mp4,.webm,.mov">
+                            <small style="color: #666; display: block; margin-top: 0.35rem;">Valgfrit — vises som et ekstra billede i galleriet.</small>
+                        </div>
+                        <div class="form-group" id="current-media" style="display: none;">
+                            <label class="form-label">Nuværende filer</label>
+                            <div id="current-media-list" style="display: grid; gap: 0.75rem;"></div>
+                        </div>
+                        <div class="form-group">
                             <label class="form-label">Materiale</label>
                             <input type="text" id="new-material" class="form-input" placeholder="Acrylic Glass">
                         </div>
@@ -336,6 +345,7 @@
             // 1. Upload files to Supabase Storage
             const file = document.getElementById('new-file').files[0];
             const backgroundFile = document.getElementById('new-background').files[0];
+            const videoFile = document.getElementById('new-video').files[0];
 
             // Validation: the product image is required only for new products
             if (!editingProductId && !file) {
@@ -346,8 +356,8 @@
                 return;
             }
 
-            // Uploads one image and returns { fileName, publicUrl }, or null if it failed.
-            async function uploadImage(imageFile, label) {
+            // Uploads one file and returns { fileName, publicUrl }, or null if it failed.
+            async function uploadFile(imageFile, label) {
                 const fileName = `${Date.now()}_${imageFile.name.replace(/\s+/g, '-')}`; // Clean filename
                 console.log(`Attempting to upload ${label}: ${fileName}`);
                 const { error: uploadError } = await client.storage.from('images').upload(fileName, imageFile);
@@ -371,35 +381,42 @@
 
             let publicUrl = null;
             let backgroundUrl = null;
+            let videoUrl = null;
             let oldFileNameToDelete = null;
             let oldBackgroundToDelete = null;
-            const newlyUploaded = []; // removed again if the database write fails
+            let oldVideoToDelete = null;
+            const newlyUploaded = []; // removed again if a later step fails
+
+            // Abandon the save without leaving half-uploaded files behind
+            const bailOut = async () => {
+                if (newlyUploaded.length) await client.storage.from('images').remove(newlyUploaded);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            };
 
             if (file) {
                 oldFileNameToDelete = oldFileFor('photo');
-                const uploaded = await uploadImage(file, 'produktbillede');
-                if (!uploaded) {
-                    submitBtn.textContent = originalText;
-                    submitBtn.disabled = false;
-                    return;
-                }
+                const uploaded = await uploadFile(file, 'produktbillede');
+                if (!uploaded) { await bailOut(); return; }
                 newlyUploaded.push(uploaded.fileName);
                 publicUrl = uploaded.publicUrl;
             }
 
-            // Background is always optional, on both create and edit
+            // Background and video are always optional, on create and edit alike
             if (backgroundFile) {
                 oldBackgroundToDelete = oldFileFor('background');
-                const uploaded = await uploadImage(backgroundFile, 'baggrundsbillede');
-                if (!uploaded) {
-                    // Do not leave the product image orphaned in storage
-                    if (newlyUploaded.length) await client.storage.from('images').remove(newlyUploaded);
-                    submitBtn.textContent = originalText;
-                    submitBtn.disabled = false;
-                    return;
-                }
+                const uploaded = await uploadFile(backgroundFile, 'baggrundsbillede');
+                if (!uploaded) { await bailOut(); return; }
                 newlyUploaded.push(uploaded.fileName);
                 backgroundUrl = uploaded.publicUrl;
+            }
+
+            if (videoFile) {
+                oldVideoToDelete = oldFileFor('video');
+                const uploaded = await uploadFile(videoFile, 'video');
+                if (!uploaded) { await bailOut(); return; }
+                newlyUploaded.push(uploaded.fileName);
+                videoUrl = uploaded.publicUrl;
             }
 
             const productData = {
@@ -419,6 +436,10 @@
 
             if (backgroundUrl) {
                 productData.background = backgroundUrl;
+            }
+
+            if (videoUrl) {
+                productData.video = videoUrl;
             }
 
             let error = null;
@@ -446,7 +467,7 @@
                 submitBtn.textContent = originalText;
             } else {
                 // DB write succeeded - delete whichever old files were replaced
-                const oldFiles = [oldFileNameToDelete, oldBackgroundToDelete].filter(Boolean);
+                const oldFiles = [oldFileNameToDelete, oldBackgroundToDelete, oldVideoToDelete].filter(Boolean);
                 if (oldFiles.length) {
                     console.log('Deleting old files:', oldFiles);
                     await client.storage.from('images').remove(oldFiles);
@@ -482,6 +503,9 @@
             } else {
                 bgStatus.textContent = 'Ingen baggrund valgt endnu.';
             }
+
+            // List the files this product currently has
+            renderCurrentMedia(product);
             
             // File input is optional during edit
             document.getElementById('new-file').required = false;
@@ -512,11 +536,96 @@
             document.querySelector('.editor-panel').scrollIntoView({ behavior: 'smooth' });
         }
 
+        // Lists the files a product currently has, each with a remove button.
+        function renderCurrentMedia(product) {
+            const wrap = document.getElementById('current-media');
+            const list = document.getElementById('current-media-list');
+            if (!wrap || !list) return;
+
+            const entries = [
+                { column: 'photo', label: 'Produktbillede', url: product.photo, kind: 'image' },
+                { column: 'video', label: 'Video', url: product.video, kind: 'video' },
+                { column: 'background', label: 'Baggrundsbillede', url: product.background, kind: 'image' }
+            ].filter(e => e.url);
+
+            if (!entries.length) {
+                wrap.style.display = 'none';
+                list.innerHTML = '';
+                return;
+            }
+
+            wrap.style.display = '';
+            list.innerHTML = '';
+
+            entries.forEach(entry => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex; align-items:center; gap:0.75rem; padding:0.5rem; border:1px solid var(--color-border);';
+
+                const preview = document.createElement(entry.kind === 'video' ? 'video' : 'img');
+                preview.src = entry.url;
+                preview.style.cssText = 'width:64px; height:64px; object-fit:cover; flex-shrink:0; background:#eee;';
+                if (entry.kind === 'video') { preview.muted = true; preview.playsInline = true; }
+
+                const info = document.createElement('div');
+                info.style.cssText = 'flex:1; min-width:0;';
+                const name = document.createElement('div');
+                name.style.fontWeight = '500';
+                name.textContent = entry.label;
+                const link = document.createElement('a');
+                link.href = entry.url;
+                link.target = '_blank';
+                link.style.cssText = 'font-size:0.75rem; color:#666; word-break:break-all;';
+                link.textContent = entry.url.split('/').pop();
+                info.append(name, link);
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = 'Fjern';
+                btn.className = 'btn-danger';
+                btn.style.cssText = 'flex-shrink:0; padding:0.5rem 1rem; font-size:0.75rem;';
+                btn.onclick = () => removeMedia(entry.column, entry.label);
+
+                row.append(preview, info, btn);
+                list.appendChild(row);
+            });
+        }
+
+        // Clears one media column and deletes its stored file.
+        async function removeMedia(column, label) {
+            if (!editingProductId) return;
+            if (!confirm(`Fjern ${label} fra dette produkt? Filen slettes permanent.`)) return;
+
+            const product = products.find(p => String(p.id) === String(editingProductId));
+            const url = product && product[column];
+
+            // Clear the column first - if this fails, nothing has been destroyed
+            const { error } = await client.from('products').update({ [column]: null }).eq('id', editingProductId);
+            if (error) {
+                console.error('Failed to clear ' + column, error);
+                alert('Fejl: ' + error.message);
+                return;
+            }
+
+            // Then remove the file, but only if it is one of ours in the bucket.
+            // Older products point at files committed to the repo instead.
+            if (url && url.includes('/images/')) {
+                const fileName = url.split('/images/').pop();
+                const { error: rmError } = await client.storage.from('images').remove([fileName]);
+                if (rmError) console.warn('Column cleared but the file remains:', rmError);
+            }
+
+            alert(`${label} fjernet.`);
+            await loadProducts();
+            editProduct(editingProductId); // redraw the panel from fresh data
+        }
+
         function resetFormState() {
             editingProductId = null;
             addForm.reset();
             document.getElementById('new-file').required = true;
             document.getElementById('background-status').textContent = 'Valgfrit — vises som baggrund på produktsiden.';
+            const mediaWrap = document.getElementById('current-media');
+            if (mediaWrap) mediaWrap.style.display = 'none';
             
             const submitBtn = addForm.querySelector('button[type="submit"]');
             submitBtn.textContent = 'Tilføj Produkt';
