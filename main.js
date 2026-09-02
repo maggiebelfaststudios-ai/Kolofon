@@ -483,6 +483,31 @@ async function initCarousel() {
         }
     };
 
+    // Point the video element at this product as soon as the product loads, so
+    // it is already buffering before anyone swipes to it, and give it the photo
+    // as a poster so that slide shows the picture rather than an empty black
+    // box while the first frame decodes.
+    const prepareVideo = (product) => {
+        if (!videoMainEl) return;
+
+        const slides = getProductSlides(product);
+        const videoSlide = slides.find(s => s.type === 'video');
+        const firstImage = slides.find(s => s.type === 'image' && s.url);
+
+        if (!videoSlide) {
+            videoMainEl.removeAttribute('src');
+            videoMainEl.removeAttribute('poster');
+            videoMainEl.load();
+            return;
+        }
+
+        if (videoMainEl.getAttribute('src') !== videoSlide.url) {
+            videoMainEl.src = videoSlide.url;
+            videoMainEl.load();
+        }
+        if (firstImage) videoMainEl.poster = firstImage.url;
+    };
+
     // Slides the new frame in from the direction of travel. The enter classes
     // snap it aside with transition:none, then removing them lets it ease back.
     const animateSlide = (el, direction) => {
@@ -502,7 +527,6 @@ async function initCarousel() {
             imageMainEl.hidden = true;
             if (videoMainEl) {
                 videoMainEl.hidden = false;
-                if (videoMainEl.getAttribute('src') !== slide.url) videoMainEl.src = slide.url;
                 videoMainEl.play().catch(() => {}); // autoplay may be refused; harmless
             }
             animateSlide(videoMainEl, direction);
@@ -596,6 +620,7 @@ async function initCarousel() {
             }
 
             // Update the main image
+            prepareVideo(product);
             updateSlide();
         };
 
