@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initCarousel();
     initCartPage();
     initViewportFix();
-    initSlider();
     initPageTransitions();
     initLanguage();
     initTheme();
@@ -116,7 +115,6 @@ const TRANSLATIONS = {
         nav_contact: "Kontakt",
         index_title: "Velkommen til Kolofon.",
         index_text: "Vi forvandler digital præcision til fysisk nærvær og skaber premium akrylvægkunst, der ikke bare observeres, men opleves.",
-        slider_text: "swipe for guds skyld",
         cart_title: "Din Kurv",
         cart_empty: "Din kurv er tom.",
         cart_browse: "Se Kollektion",
@@ -191,7 +189,6 @@ const TRANSLATIONS = {
         nav_contact: "Contact",
         index_title: "Welcome to Kolofon.",
         index_text: "We transform digital precision into physical presence, creating premium acrylic wall art that is not just observed, but experienced.",
-        slider_text: "Swipe to Explore",
         cart_title: "Your Cart",
         cart_empty: "Your cart is empty.",
         cart_browse: "Browse Collection",
@@ -1051,71 +1048,6 @@ function initFooterYear() {
     if (yearEl) {
         yearEl.textContent = new Date().getFullYear();
     }
-}
-
-
-/**
- * Initialize Interactive Slider
- * Handles the "Slide to Explore" functionality on the home page.
- */
-function initSlider() {
-    const slider = document.getElementById('explore-slider');
-    if (!slider) return;
-
-    const thumb = slider.querySelector('.slider-thumb');
-    const text = slider.querySelector('.slider-text');
-    let isDragging = false;
-    let startX = 0;
-    let currentX = 0;
-
-    const startDrag = (e) => {
-        isDragging = true;
-        startX = (e.type === 'touchstart') ? e.touches[0].clientX : e.clientX;
-        thumb.style.transition = 'none'; // Disable transition for direct 1:1 movement
-    };
-
-    const onDrag = (e) => {
-        if (!isDragging) return;
-        
-        const clientX = (e.type === 'touchmove') ? e.touches[0].clientX : e.clientX;
-        const delta = clientX - startX;
-        const maxDrag = slider.offsetWidth - thumb.offsetWidth - 8; // 8px for padding (4px each side)
-
-        // Clamp the drag value
-        currentX = Math.max(0, Math.min(delta, maxDrag));
-        
-        thumb.style.transform = `translateX(${currentX}px)`;
-        
-        // Fade text based on progress
-        const opacity = 1 - (currentX / maxDrag);
-        text.style.opacity = opacity;
-        text.textContent = t('slider_text'); // Ensure text is translated
-    };
-
-    const endDrag = () => {
-        if (!isDragging) return;
-        isDragging = false;
-        const maxDrag = slider.offsetWidth - thumb.offsetWidth - 8;
-
-        if (currentX >= maxDrag * 0.9) {
-            // Threshold reached - Navigate
-            window.location.href = 'products.html';
-        } else {
-            // Reset
-            thumb.style.transition = 'transform 0.3s ease';
-            thumb.style.transform = 'translateX(0)';
-            text.style.opacity = '1';
-        }
-    };
-
-    thumb.addEventListener('mousedown', startDrag);
-    thumb.addEventListener('touchstart', startDrag);
-
-    document.addEventListener('mousemove', onDrag);
-    document.addEventListener('touchmove', onDrag);
-
-    document.addEventListener('mouseup', endDrag);
-    document.addEventListener('touchend', endDrag);
 }
 
 /**
