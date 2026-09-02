@@ -191,6 +191,7 @@ body {
     height: 100%;
     object-fit: contain;
     display: block;
+    transition: opacity 0.4s ease, transform 0.4s ease;
 }
 .carousel-image[hidden], .carousel-video[hidden] { display: none; }
 
@@ -230,7 +231,7 @@ body {
     height: 100%;
     object-fit: contain;
     display: block;
-    transition: opacity 0.4s ease;
+    transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
 /* Carousel Controls */

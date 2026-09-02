@@ -474,14 +474,26 @@ async function initCarousel() {
             dot.className = 'gallery-dot' + (i === currentSlideIndex ? ' active' : '');
             dot.setAttribute('aria-label', `Vis billede ${i + 1}`);
             dot.addEventListener('click', () => {
+                if (i === currentSlideIndex) return;
+                const direction = i > currentSlideIndex ? 'next' : 'prev';
                 currentSlideIndex = i;
-                updateSlide();
+                updateSlide(direction);
             });
             dotsEl.appendChild(dot);
         }
     };
 
-    const updateSlide = () => {
+    // Slides the new frame in from the direction of travel. The enter classes
+    // snap it aside with transition:none, then removing them lets it ease back.
+    const animateSlide = (el, direction) => {
+        if (!el || !direction) return;
+        const enterClass = direction === 'next' ? 'viewer-enter-right' : 'viewer-enter-left';
+        el.classList.add(enterClass);
+        void el.offsetWidth; // force the start state to be applied before removing it
+        el.classList.remove(enterClass);
+    };
+
+    const updateSlide = (direction = null) => {
         const product = products[currentProductIndex];
         const slides = getProductSlides(product);
         const slide = slides[currentSlideIndex] || slides[0];
@@ -493,6 +505,7 @@ async function initCarousel() {
                 if (videoMainEl.getAttribute('src') !== slide.url) videoMainEl.src = slide.url;
                 videoMainEl.play().catch(() => {}); // autoplay may be refused; harmless
             }
+            animateSlide(videoMainEl, direction);
         } else {
             if (videoMainEl) {
                 videoMainEl.pause();
@@ -501,6 +514,7 @@ async function initCarousel() {
             imageMainEl.hidden = false;
             imageMainEl.src = slide.url || '';
             imageMainEl.style.opacity = slide.url ? '1' : '0.5';
+            animateSlide(imageMainEl, direction);
         }
 
         // The full screen viewer handles stills only
@@ -531,7 +545,7 @@ async function initCarousel() {
 
             const step = dx < 0 ? 1 : -1;
             currentSlideIndex = (currentSlideIndex + step + slides.length) % slides.length;
-            updateSlide();
+            updateSlide(step === 1 ? 'next' : 'prev');
         }, { passive: true });
     }
 
