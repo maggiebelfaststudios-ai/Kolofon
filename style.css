@@ -376,7 +376,9 @@ body {
 
 /* Typography & Components */
 .product-category { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: #888; margin-bottom: 0.5rem; display: block; }
-.product-title { font-family: var(--font-serif); font-size: 2rem; margin-bottom: 0.25rem; line-height: 1.1; }
+/* Fluid size - "1984" and "Slaughterhouse-Five" share this row with the price,
+   so one fixed size either wastes room or wraps the long title badly. */
+.product-title { font-family: var(--font-serif); font-size: clamp(1.4rem, 6vw, 2rem); margin-bottom: 0.25rem; line-height: 1.1; overflow-wrap: break-word; hyphens: auto; }
 .product-author { font-size: 1.1rem; color: var(--color-text-muted); margin-bottom: 0; font-style: italic; }
 
 /* Title and author on the left, price and stock aligned right alongside them */
@@ -489,7 +491,8 @@ body {
     .btn-add-to-cart .btn-text { display: inline; }
     .btn-add-to-cart .btn-icon { display: none; }
 
-    .product-title { font-size: 3rem; }
+    /* Scales down before a long title has to fight the price for room */
+    .product-title { font-size: clamp(2rem, 2.6vw, 3rem); }
 
     /* The information sits beneath the photo in the left column, and the
        blueprint panel runs full height down the right. */
