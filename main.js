@@ -395,6 +395,10 @@ async function initCarousel() {
     const btnText = addToCartBtn ? addToCartBtn.querySelector('.btn-text') : null;
     const detailsContent = document.querySelector('.details-content');
     const imageLoader = document.querySelector('#image-loader');
+    const videoMainEl = document.querySelector('#product-video-main');
+    const dotsEl = document.querySelector('#gallery-dots');
+    const carouselMainEl = document.querySelector('.image-carousel-main');
+    const fullscreenBtn = document.querySelector('#fullscreen-btn');
     const detailsColumn = document.querySelector('.details-column');
 
     if (!imageMainEl || !prevBtn || !nextBtn) return;
@@ -428,49 +432,112 @@ async function initCarousel() {
     }
 
     let currentProductIndex = 0;
-    let currentImageIndex = 0;
+    let currentSlideIndex = 0;
 
-    // Parse product images (JSON array stored in 'images' field, or fallback to 'photo' field)
-    const getProductImages = (product) => {
-        const images = [];
-        
-        // Try to parse 'images' field (JSON array)
+    // A product's gallery: its main photo, then any extra photos from the
+    // "images" column, then its video. Products with one photo get one slide.
+    const getProductSlides = (product) => {
+        const slides = [];
+
+        if (product.photo) slides.push({ type: 'image', url: product.photo });
+
+        // "images" holds additional photos as a JSON array of URLs
         if (product.images) {
             try {
-                const parsed = typeof product.images === 'string' ? JSON.parse(product.images) : product.images;
-                if (Array.isArray(parsed)) {
-                    images.push(...parsed.filter(img => img));
+                const extra = typeof product.images === 'string' ? JSON.parse(product.images) : product.images;
+                if (Array.isArray(extra)) {
+                    extra.filter(Boolean).forEach(url => slides.push({ type: 'image', url }));
                 }
             } catch (e) {
                 console.warn('Failed to parse images for product', product.id, e);
             }
         }
-        
-        // Fallback to 'photo' field
-        if (images.length === 0 && product.photo) {
-            images.push(product.photo);
-        }
 
-        return images.length > 0 ? images : [''];
+        if (product.video) slides.push({ type: 'video', url: product.video });
+
+        return slides.length ? slides : [{ type: 'image', url: '' }];
     };
 
-    const updateImage = () => {
+    const renderDots = (count) => {
+        if (!dotsEl) return;
+        // One slide needs no dots at all
+        if (count <= 1) {
+            dotsEl.innerHTML = '';
+            dotsEl.hidden = true;
+            return;
+        }
+        dotsEl.hidden = false;
+        dotsEl.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+            const dot = document.createElement('button');
+            dot.type = 'button';
+            dot.className = 'gallery-dot' + (i === currentSlideIndex ? ' active' : '');
+            dot.setAttribute('aria-label', `Vis billede ${i + 1}`);
+            dot.addEventListener('click', () => {
+                currentSlideIndex = i;
+                updateSlide();
+            });
+            dotsEl.appendChild(dot);
+        }
+    };
+
+    const updateSlide = () => {
         const product = products[currentProductIndex];
-        const images = getProductImages(product);
-        const imageUrl = images[currentImageIndex] || '';
+        const slides = getProductSlides(product);
+        const slide = slides[currentSlideIndex] || slides[0];
 
-        if (imageUrl) {
-            imageMainEl.src = imageUrl;
-            imageMainEl.style.opacity = '1';
+        if (slide.type === 'video') {
+            imageMainEl.hidden = true;
+            if (videoMainEl) {
+                videoMainEl.hidden = false;
+                if (videoMainEl.getAttribute('src') !== slide.url) videoMainEl.src = slide.url;
+                videoMainEl.play().catch(() => {}); // autoplay may be refused; harmless
+            }
         } else {
-            imageMainEl.src = '';
-            imageMainEl.style.opacity = '0.5';
+            if (videoMainEl) {
+                videoMainEl.pause();
+                videoMainEl.hidden = true;
+            }
+            imageMainEl.hidden = false;
+            imageMainEl.src = slide.url || '';
+            imageMainEl.style.opacity = slide.url ? '1' : '0.5';
         }
+
+        // The full screen viewer handles stills only
+        if (fullscreenBtn) fullscreenBtn.hidden = (slide.type === 'video');
+
+        renderDots(slides.length);
     };
+
+    // Swipe between a product's own slides. The arrows switch products, so
+    // horizontal swipe is free to mean "next slide" without clashing.
+    if (carouselMainEl) {
+        let slideTouchX = 0;
+        let slideTouchY = 0;
+
+        carouselMainEl.addEventListener('touchstart', (e) => {
+            slideTouchX = e.touches[0].clientX;
+            slideTouchY = e.touches[0].clientY;
+        }, { passive: true });
+
+        carouselMainEl.addEventListener('touchend', (e) => {
+            const slides = getProductSlides(products[currentProductIndex]);
+            if (slides.length <= 1) return;
+
+            const dx = e.changedTouches[0].clientX - slideTouchX;
+            const dy = e.changedTouches[0].clientY - slideTouchY;
+            // Ignore short movements and anything closer to a vertical scroll
+            if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+
+            const step = dx < 0 ? 1 : -1;
+            currentSlideIndex = (currentSlideIndex + step + slides.length) % slides.length;
+            updateSlide();
+        }, { passive: true });
+    }
 
     const updateProduct = (index, direction = null) => {
         const product = products[index];
-        currentImageIndex = 0;
+        currentSlideIndex = 0;
         
         const updateDOM = () => {
             titleEl.textContent = product.title;
@@ -515,7 +582,7 @@ async function initCarousel() {
             }
 
             // Update the main image
-            updateImage();
+            updateSlide();
         };
 
         if (direction) {
@@ -572,8 +639,13 @@ async function initCarousel() {
         addToCartBtn.addEventListener('click', () => {
             const product = products[currentProductIndex];
             // Use current image as thumbnail
-            const images = getProductImages(product);
-            const thumbnail = images[currentImageIndex] || null;
+            // Thumbnail for the cart - the current slide, or the first still
+            // image if the visitor is looking at the video
+            const slides = getProductSlides(product);
+            const current = slides[currentSlideIndex];
+            const thumbnail = (current && current.type === 'image' && current.url)
+                ? current.url
+                : (slides.find(s => s.type === 'image') || {}).url || null;
             
             if (addToCart(product, thumbnail)) {
                 // Visual feedback

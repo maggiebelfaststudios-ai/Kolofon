@@ -185,6 +185,46 @@ body {
     background: var(--color-bg-subtle);
 }
 
+/* Video slides sit in the same box as the photos and match their fit */
+.carousel-video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+.carousel-image[hidden], .carousel-video[hidden] { display: none; }
+
+/* Gallery position dots. Only rendered when a product has more than one
+   slide, so single-image products look untouched. */
+.gallery-dots {
+    position: absolute;
+    bottom: 1rem;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    pointer-events: none; /* only the dots themselves are clickable */
+}
+.gallery-dots[hidden] { display: none; }
+
+.gallery-dot {
+    pointer-events: auto;
+    width: 9px;
+    height: 9px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--color-text);
+    background: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+.gallery-dot.active {
+    background: var(--color-text);
+    transform: scale(1.15);
+}
+
 .carousel-image {
     width: 100%;
     height: 100%;
@@ -214,6 +254,8 @@ body {
     transition: transform 0.2s ease, background 0.2s ease;
 }
 .fullscreen-btn:hover { transform: scale(1.1); background: #FFFFFF; }
+/* display: flex above would otherwise beat the default for [hidden] */
+.fullscreen-btn[hidden] { display: none; }
 
 /* Full screen viewer. A plain overlay rather than the browser Fullscreen
    API, which iOS Safari does not support for anything but video - there
