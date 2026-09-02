@@ -183,6 +183,10 @@ body {
     position: relative;
     overflow: hidden;
     background: var(--color-bg-subtle);
+    /* Horizontal drags belong to the gallery, vertical ones to the page.
+       Without this the browser also pans the page during a swipe, so the
+       whole layout drifts sideways instead of just the picture. */
+    touch-action: pan-y;
 }
 
 /* Video slides sit in the same box as the photos and match their fit */
