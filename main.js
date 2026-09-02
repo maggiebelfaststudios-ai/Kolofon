@@ -394,7 +394,6 @@ async function initCarousel() {
     const addToCartBtn = document.querySelector('.btn-add-to-cart');
     const btnText = addToCartBtn ? addToCartBtn.querySelector('.btn-text') : null;
     const detailsContent = document.querySelector('.details-content');
-    const imageLoader = document.querySelector('#image-loader');
     const videoMainEl = document.querySelector('#product-video-main');
     const dotsEl = document.querySelector('#gallery-dots');
     const carouselMainEl = document.querySelector('.image-carousel-main');
@@ -573,7 +572,7 @@ async function initCarousel() {
         }, { passive: true });
     }
 
-    const updateProduct = (index, direction = null) => {
+    const updateProduct = (index) => {
         const product = products[index];
         currentSlideIndex = 0;
         
@@ -624,50 +623,17 @@ async function initCarousel() {
             updateSlide();
         };
 
-        if (direction) {
-            prevBtn.disabled = true;
-            nextBtn.disabled = true;
-
-            const enterClass = direction === 'next' ? 'viewer-enter-right' : 'viewer-enter-left';
-
-            // Immediately hide the old image and show spinner
-            if (detailsContent) detailsContent.classList.add('fade-out');
-            imageMainEl.style.opacity = '0';
-            if (imageLoader) imageLoader.style.display = '';
-
-            updateDOM();
-
-            // Simulate loading delay for animation
-            setTimeout(() => {
-                if (imageLoader) imageLoader.style.display = 'none';
-
-                // Prepare for entry
-                imageMainEl.style.transition = 'none';
-                imageMainEl.classList.add(enterClass);
-                imageMainEl.style.opacity = '';
-                void imageMainEl.offsetWidth;
-
-                // Animate in
-                imageMainEl.style.transition = '';
-                imageMainEl.classList.remove(enterClass);
-                if (detailsContent) detailsContent.classList.remove('fade-out');
-
-                prevBtn.disabled = false;
-                nextBtn.disabled = false;
-            }, 100);
-        } else {
-            updateDOM();
-        }
+        updateDOM();
     };
 
     prevBtn.addEventListener('click', () => {
         currentProductIndex = (currentProductIndex - 1 + products.length) % products.length;
-        updateProduct(currentProductIndex, 'prev');
+        updateProduct(currentProductIndex);
     });
 
     nextBtn.addEventListener('click', () => {
         currentProductIndex = (currentProductIndex + 1) % products.length;
-        updateProduct(currentProductIndex, 'next');
+        updateProduct(currentProductIndex);
     });
 
     // Initialize with the first product
