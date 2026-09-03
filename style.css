@@ -409,6 +409,17 @@ body {
 
 /* Typography & Components */
 .product-category { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: #888; margin-bottom: 0.5rem; display: block; }
+/* Back to the collection, sitting above the product title */
+.breadcrumb-back {
+    display: inline-block;
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+.breadcrumb-back:hover { color: var(--color-text); }
+
 .product-title { font-family: var(--font-serif); font-size: 2rem; margin-bottom: 0.5rem; line-height: 1.1; }
 .product-author { font-size: 1.1rem; color: var(--color-text-muted); margin-bottom: 1rem; font-style: italic; }
 
