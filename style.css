@@ -11,6 +11,7 @@
     --font-serif: 'Playfair Display', serif;
     
     --navbar-height: 64px;
+    --breadcrumb-height: 44px;
 }
 
 /* ===== DARK MODE ===== */
@@ -153,10 +154,20 @@ body {
 .mobile-menu-overlay.active .mobile-link:nth-child(4) { transition-delay: 0.25s; }
 
 /* ===== PRODUCT LAYOUT (Mobile First) ===== */
+/* Sits between the navigation and the photo. A fixed height so the product
+   layout below can subtract it and still fill the viewport exactly. */
+.breadcrumb-bar {
+    height: var(--breadcrumb-height);
+    display: flex;
+    align-items: center;
+    padding: 0 1.5rem;
+    background: var(--color-bg);
+}
+
 .product-layout {
     display: flex;
     flex-direction: column;
-    min-height: calc(100dvh - var(--navbar-height));
+    min-height: calc(100dvh - var(--navbar-height) - var(--breadcrumb-height));
 }
 
 .viewer-column {
@@ -496,11 +507,12 @@ body {
 /* ===== DESKTOP SCALING (Min-Width) ===== */
 @media (min-width: 1024px) {
     .navbar { padding: 0 3rem; }
+    .breadcrumb-bar { padding: 0 4rem; }
     .product-layout { 
         display: grid; 
         grid-template-columns: 1.5fr 1fr; 
         grid-template-rows: 1fr auto;
-        height: calc(100dvh - var(--navbar-height)); 
+        height: calc(100dvh - var(--navbar-height) - var(--breadcrumb-height));
         min-height: auto;
     }
     .viewer-column { grid-column: 1; grid-row: 1; height: 100%; min-height: 0; }
