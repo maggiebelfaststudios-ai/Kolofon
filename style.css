@@ -456,7 +456,7 @@ body {
     font-weight: 700;
 }
 
-.product-title { font-family: var(--font-display); font-size: 4rem; margin-bottom: 0.5rem; line-height: 1.1; }
+.product-title { font-family: var(--font-display); font-size: 2rem; margin-bottom: 0.5rem; line-height: 1.1; }
 .product-author { font-size: 1.1rem; color: var(--color-text-muted); margin-bottom: 1rem; font-style: italic; }
 
 .product-price-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--color-border); }
@@ -567,7 +567,7 @@ body {
     .btn-add-to-cart .btn-text { display: inline; }
     .btn-add-to-cart .btn-icon { display: none; }
 
-    .product-title { font-size: 6rem; }
+    .product-title { font-size: 3rem; }
 
     /* The information sits beneath the photo in the left column, and the
        blueprint panel runs full height down the right. */
