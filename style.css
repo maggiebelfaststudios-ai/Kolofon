@@ -8,7 +8,9 @@
     --color-border: #E5E5E5;
     
     --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-    --font-serif: 'Playfair Display', serif;
+    /* Adobe Fonts. Only weight 400 ships, so nothing may ask for bold.
+       Falls back to serif, which is what the site rendered before. */
+    --font-display: 'scribo-regular', serif;
     
     --navbar-height: 64px;
     --breadcrumb-height: 56px;
@@ -443,7 +445,17 @@ body {
 }
 .breadcrumb-back:hover .breadcrumb-arrow { transform: translateX(-3px); }
 
-.product-title { font-family: var(--font-serif); font-size: 2rem; margin-bottom: 0.5rem; line-height: 1.1; }
+/* scribo-regular ships in 400 only. Headings are bold by default, which the
+   browser would fake by smearing the outlines, so pin them all to 400. */
+.product-title,
+.content-page h1,
+.overview-title,
+.product-card-title,
+.recommendations-title {
+    font-weight: 400;
+}
+
+.product-title { font-family: var(--font-display); font-size: 2rem; margin-bottom: 0.5rem; line-height: 1.1; }
 .product-author { font-size: 1.1rem; color: var(--color-text-muted); margin-bottom: 1rem; font-style: italic; }
 
 .product-price-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--color-border); }
@@ -738,7 +750,7 @@ body {
 }
 
 .content-page h1 {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: 2.5rem;
     margin-bottom: 2rem;
     text-align: center;
@@ -834,7 +846,7 @@ textarea.form-input {
     flex: 1;
 }
 .cart-item-title {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: 1.1rem;
     margin-bottom: 0.25rem;
     font-weight: 400;
@@ -882,7 +894,7 @@ textarea.form-input {
 }
 
 .footer-section h4 {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: 1rem;
     margin-bottom: 1rem;
     font-weight: 400;
@@ -941,7 +953,7 @@ body.page-fade-out {
 }
 
 .overview-title {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: 2.5rem;
     margin-bottom: 2.5rem;
     text-align: center;
@@ -984,7 +996,7 @@ body.page-fade-out {
 .product-card:hover .product-card-thumb img { transform: scale(1.03); }
 
 .product-card-title {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: 1.35rem;
     line-height: 1.2;
     margin-bottom: 0.25rem;
@@ -1023,7 +1035,7 @@ body.page-fade-out {
 .recommendations[hidden] { display: none; }
 
 .recommendations-title {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: 1.5rem;
     margin-bottom: 1.5rem;
     text-align: center;
@@ -1061,7 +1073,7 @@ body.page-fade-out {
 }
 
 .recommendation-name {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: 1.05rem;
     line-height: 1.2;
     margin-bottom: 0.2rem;
