@@ -11,7 +11,7 @@
     --font-serif: 'Playfair Display', serif;
     
     --navbar-height: 64px;
-    --breadcrumb-height: 44px;
+    --breadcrumb-height: 56px;
 }
 
 /* ===== DARK MODE ===== */
@@ -420,16 +420,28 @@ body {
 
 /* Typography & Components */
 .product-category { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: #888; margin-bottom: 0.5rem; display: block; }
-/* Back to the collection, sitting above the product title */
+/* Back to the collection, in its own bar above the photo */
 .breadcrumb-back {
-    display: inline-block;
-    margin-bottom: 0.75rem;
-    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    letter-spacing: 0.02em;
     color: var(--color-text-muted);
     text-decoration: none;
     transition: color 0.2s ease;
+    /* No margin here: the bar centres this with align-items, and a bottom
+       margin would sit it above the true middle. */
 }
 .breadcrumb-back:hover { color: var(--color-text); }
+
+/* The arrow eases left on hover, which reads as "go back" */
+.breadcrumb-arrow {
+    font-size: 1.15em;
+    line-height: 1;
+    transition: transform 0.2s ease;
+}
+.breadcrumb-back:hover .breadcrumb-arrow { transform: translateX(-3px); }
 
 .product-title { font-family: var(--font-serif); font-size: 2rem; margin-bottom: 0.5rem; line-height: 1.1; }
 .product-author { font-size: 1.1rem; color: var(--color-text-muted); margin-bottom: 1rem; font-style: italic; }
