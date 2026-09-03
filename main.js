@@ -6,6 +6,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     initCarousel();
+    initProductGrid();
     initCartPage();
     initViewportFix();
     initPageTransitions();
@@ -55,6 +56,90 @@ function initImageLightbox() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && !lightbox.hidden) close();
     });
+}
+
+/**
+ * Product overview grid. Lists every product as a card linking to its own
+ * page. Only runs on products.html, where #product-grid exists.
+ */
+async function initProductGrid() {
+    const grid = document.querySelector('#product-grid');
+    if (!grid) return;
+
+    const status = document.querySelector('#overview-status');
+
+    if (!supabaseClient) {
+        if (status) status.textContent = 'Kunne ikke hente produkter.';
+        return;
+    }
+
+    const { data, error } = await supabaseClient.from('products').select('*').order('id', { ascending: true });
+
+    if (error) {
+        console.error('Error loading products:', error);
+        if (status) status.textContent = 'Kunne ikke hente produkter.';
+        return;
+    }
+
+    if (!data || !data.length) {
+        if (status) status.textContent = 'Ingen produkter endnu.';
+        return;
+    }
+
+    grid.innerHTML = '';
+
+    data.forEach(product => {
+        const stock = product.stockQuantity ?? product.stockquantity ?? 0;
+
+        const card = document.createElement('a');
+        card.className = 'product-card';
+        card.href = `product.html?id=${encodeURIComponent(product.id)}`;
+
+        const thumb = document.createElement('div');
+        thumb.className = 'product-card-thumb';
+        if (product.photo) {
+            const img = document.createElement('img');
+            img.src = product.photo;
+            img.alt = product.title || '';
+            img.loading = 'lazy';
+            thumb.appendChild(img);
+        }
+
+        const name = document.createElement('h2');
+        name.className = 'product-card-title';
+        name.textContent = product.title || '';
+
+        const author = document.createElement('div');
+        author.className = 'product-card-author';
+        author.textContent = product.author || '';
+
+        const price = document.createElement('div');
+        price.className = 'product-card-price';
+        price.textContent = formatPrice(product.price);
+
+        card.append(thumb, name, author, price);
+
+        if (stock <= 0) {
+            card.classList.add('is-sold-out');
+            const badge = document.createElement('div');
+            badge.className = 'product-card-soldout';
+            badge.textContent = t('stock_out');
+            thumb.appendChild(badge);
+        }
+
+        grid.appendChild(card);
+    });
+}
+
+/**
+ * Prices are stored as strings like "950". One formatter so the product
+ * page, the grid and the recommendations all render them the same way.
+ */
+function formatPrice(value) {
+    const num = typeof value === 'number'
+        ? value
+        : parseFloat(String(value).replace(/[^0-9.,]/g, '').replace(',', '.'));
+    return !isNaN(num) ? `DKK ${num.toLocaleString('da-DK')}` : String(value ?? '');
 }
 
 function initHomeVideos() {
@@ -545,6 +630,11 @@ async function initCarousel() {
         // The full screen viewer handles stills only
         if (fullscreenBtn) fullscreenBtn.hidden = (slide.type === 'video');
 
+        // The arrows belong to this gallery now, so they are pointless when
+        // there is only one thing to look at
+        if (prevBtn) prevBtn.hidden = slides.length <= 1;
+        if (nextBtn) nextBtn.hidden = slides.length <= 1;
+
         renderDots(slides.length);
     };
 
@@ -580,6 +670,8 @@ async function initCarousel() {
         
         const updateDOM = () => {
             titleEl.textContent = product.title;
+            // Each product has its own URL now, so name the tab after it
+            document.title = product.title ? product.title + ' — Kolofon' : 'Kolofon';
             if (authorEl) authorEl.textContent = product.author ? `by ${product.author}` : '';
 
             // Per-product background blueprint. Clearing it falls back to the
@@ -591,10 +683,7 @@ async function initCarousel() {
             }
             
             // Format price: DKK 2.000 (Currency followed by sum, with dot separator)
-            const priceNum = typeof product.price === 'number' 
-                ? product.price 
-                : parseFloat(String(product.price).replace(/[^0-9.,]/g, '').replace(',', '.'));
-            priceEl.textContent = !isNaN(priceNum) ? `DKK ${priceNum.toLocaleString('da-DK')}` : product.price;
+            priceEl.textContent = formatPrice(product.price);
             
             // Update Stock Status
             if (stockEl) {
@@ -628,18 +717,70 @@ async function initCarousel() {
         updateDOM();
     };
 
-    prevBtn.addEventListener('click', () => {
-        currentProductIndex = (currentProductIndex - 1 + products.length) % products.length;
-        updateProduct(currentProductIndex);
-    });
+    // Every other product, as cards beneath the one being viewed
+    const renderRecommendations = () => {
+        const section = document.querySelector('#recommendations');
+        const track = document.querySelector('#recommendations-track');
+        if (!section || !track) return;
 
-    nextBtn.addEventListener('click', () => {
-        currentProductIndex = (currentProductIndex + 1) % products.length;
-        updateProduct(currentProductIndex);
-    });
+        const others = products.filter((_, i) => i !== currentProductIndex);
+        if (!others.length) {
+            section.hidden = true; // only one product, nothing to suggest
+            return;
+        }
 
-    // Initialize with the first product
-    updateProduct(0);
+        section.hidden = false;
+        track.innerHTML = '';
+
+        others.forEach(other => {
+            const card = document.createElement('a');
+            card.className = 'recommendation-card';
+            card.href = `product.html?id=${encodeURIComponent(other.id)}`;
+
+            const thumb = document.createElement('div');
+            thumb.className = 'recommendation-thumb';
+            if (other.photo) {
+                const img = document.createElement('img');
+                img.src = other.photo;
+                img.alt = other.title || '';
+                img.loading = 'lazy';
+                thumb.appendChild(img);
+            }
+
+            const name = document.createElement('div');
+            name.className = 'recommendation-name';
+            name.textContent = other.title || '';
+
+            const price = document.createElement('div');
+            price.className = 'recommendation-price';
+            price.textContent = formatPrice(other.price);
+
+            card.append(thumb, name, price);
+            track.appendChild(card);
+        });
+    };
+
+    // The arrows step through this product's own photos and video. Moving
+    // between products is the overview page and the recommendations strip now.
+    const stepSlide = (step) => {
+        const slides = getProductSlides(products[currentProductIndex]);
+        if (slides.length <= 1) return;
+        currentSlideIndex = (currentSlideIndex + step + slides.length) % slides.length;
+        updateSlide(step === 1 ? 'next' : 'prev');
+    };
+
+    prevBtn.addEventListener('click', () => stepSlide(-1));
+    nextBtn.addEventListener('click', () => stepSlide(1));
+
+    // Which product to show: ?id= on the URL, falling back to the first
+    const requestedId = new URLSearchParams(window.location.search).get('id');
+    const requestedIndex = requestedId
+        ? products.findIndex(p => String(p.id) === String(requestedId))
+        : -1;
+    currentProductIndex = requestedIndex >= 0 ? requestedIndex : 0;
+
+    updateProduct(currentProductIndex);
+    renderRecommendations();
 
     // Add to Cart Logic
     if (addToCartBtn) {
