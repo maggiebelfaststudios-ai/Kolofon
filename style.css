@@ -75,6 +75,17 @@ body {
     align-items: center;
 }
 
+/* Text link in the top bar, so the collection is one tap away everywhere */
+.nav-link {
+    color: var(--color-text);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: opacity 0.2s ease;
+}
+.nav-link:hover { opacity: 0.6; }
+
 .icon-btn {
     background: none;
     border: none;
