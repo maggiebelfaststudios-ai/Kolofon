@@ -10,7 +10,7 @@
     --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
     /* Adobe Fonts. Only weight 400 ships, so nothing may ask for bold.
        Falls back to serif, which is what the site rendered before. */
-    --font-display: 'scribo-regular', serif;
+    --font-display: 'social-gothic-soft', sans-serif;
     
     --navbar-height: 64px;
     --breadcrumb-height: 56px;
@@ -445,14 +445,15 @@ body {
 }
 .breadcrumb-back:hover .breadcrumb-arrow { transform: translateX(-3px); }
 
-/* scribo-regular ships in 400 only. Headings are bold by default, which the
-   browser would fake by smearing the outlines, so pin them all to 400. */
+/* social-gothic-soft ships in 700 only, so every use of the display face
+   asks for 700 rather than a weight the browser would have to approximate. */
 .product-title,
 .content-page h1,
 .overview-title,
 .product-card-title,
-.recommendations-title {
-    font-weight: 400;
+.recommendations-title,
+.recommendation-name {
+    font-weight: 700;
 }
 
 .product-title { font-family: var(--font-display); font-size: 2rem; margin-bottom: 0.5rem; line-height: 1.1; }
@@ -849,7 +850,7 @@ textarea.form-input {
     font-family: var(--font-display);
     font-size: 1.1rem;
     margin-bottom: 0.25rem;
-    font-weight: 400;
+    font-weight: 700;
 }
 .cart-item-price {
     color: var(--color-text);
@@ -897,7 +898,7 @@ textarea.form-input {
     font-family: var(--font-display);
     font-size: 1rem;
     margin-bottom: 1rem;
-    font-weight: 400;
+    font-weight: 700;
 }
 
 .footer-section p {
