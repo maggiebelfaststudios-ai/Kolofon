@@ -49,6 +49,12 @@ Deno.serve(async (req: Request) => {
 
     const customer = order.customer_details || {};
     const shipping = customer.shipping || {};
+    // Only mention tracking when there is a number. An order shipped before
+    // the Shipmondo integration existed has none, and a blank line reads badly.
+    const trackingLine = order.tracking_number
+      ? `\nTrack & trace: ${order.tracking_number}\nFølg pakken på gls-group.com/DK/da/find-pakke/`
+      : '';
+
     const itemList = order.items.map((item: any) => `${item.title} x${item.quantity} — DKK ${item.priceValue * item.quantity}`).join('\n');
     const shippingLabel = shipping.method === 'shop'
       ? `Pakkeshop — ${shipping.servicePoint?.name}`
@@ -62,7 +68,7 @@ Deno.serve(async (req: Request) => {
         from: 'Kolofon <ordre@kolofon.dk>',
         to: order.email,
         subject: `Din pakke er på vej — ${order_id}`,
-        text: `Hej ${customer.fullName},\n\nDin ordre er nu afsendt!\n\nOrdre ID: ${order_id}\nTotal: DKK ${order.total}\n\nVarer:\n${itemList}\n\nLevering: ${shippingLabel}\n\nDu vil modtage en track & trace besked direkte fra GLS.\n\nMed venlig hilsen\nKolofon`,
+        text: `Hej ${customer.fullName},\n\nDin ordre er nu afsendt!\n\nOrdre ID: ${order_id}\nTotal: DKK ${order.total}\n\nVarer:\n${itemList}\n\nLevering: ${shippingLabel}${trackingLine}\n\nMed venlig hilsen\nKolofon`,
       }),
     });
 

@@ -266,8 +266,8 @@
                     order.email;
 
                 const shippedBtn = order.shipped_notification_sent
-                    ? `<span style="color: green; font-size: 0.85rem;">✓ Afsendt</span>`
-                    : `<button onclick="notifyShipped('${order.order_id}', this)" class="btn-primary" style="padding: 0.4rem 0.75rem; font-size: 0.75rem;">Marker afsendt</button>`;
+                    ? `<span style="color: green; font-size: 0.85rem;">✓ Afsendt</span>${order.tracking_number ? `<br><span style="font-size:0.7rem; color:#666;">${order.tracking_number}</span>` : ''}<br><button onclick="openLabel(\'${order.order_id}\')" class="btn-primary" style="margin-top:0.35rem; padding: 0.3rem 0.6rem; font-size: 0.7rem;">Print label</button>`
+                    : `<button onclick="notifyShipped(\'${order.order_id}\', this)" class="btn-primary" style="padding: 0.4rem 0.75rem; font-size: 0.75rem;">Marker afsendt</button>`;
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -281,29 +281,72 @@
             });
         }
 
+        // Marking an order shipped does three things in order: book the parcel
+        // with Shipmondo, hand over the label to print, then tell the customer.
         async function notifyShipped(orderId, btn) {
-            if (!confirm(`Send forsendelsesbesked til kunden for ordre ${orderId}?`)) return;
+            if (!confirm(`Opret GLS-forsendelse og send besked til kunden for ordre ${orderId}?`)) return;
             btn.disabled = true;
-            btn.textContent = 'Sender...';
 
             const { data: { session } } = await client.auth.getSession();
-            const res = await fetch(`${supabaseUrl}/functions/v1/send-shipping-notification`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.access_token}`,
-                },
-                body: JSON.stringify({ order_id: orderId }),
-            });
+            const authHeaders = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+            };
 
-            if (res.ok) {
-                btn.parentElement.innerHTML = '<span style="color: green; font-size: 0.85rem;">✓ Afsendt</span>';
-            } else {
-                const err = await res.json();
-                alert('Fejl: ' + (err.error || 'Ukendt fejl'));
+            // 1. Book the parcel
+            btn.textContent = 'Opretter forsendelse...';
+            const shipRes = await fetch(`${supabaseUrl}/functions/v1/create-shipment`, {
+                method: 'POST', headers: authHeaders, body: JSON.stringify({ order_id: orderId }),
+            });
+            const shipData = await shipRes.json();
+
+            if (!shipRes.ok) {
+                alert('Fejl ved oprettelse af forsendelse: ' + (shipData.error || 'Ukendt fejl'));
                 btn.disabled = false;
                 btn.textContent = 'Marker afsendt';
+                return;
             }
+
+            // 2. Open the label so it can be printed
+            btn.textContent = 'Henter label...';
+            await openLabel(orderId);
+
+            // 3. Tell the customer. The parcel already exists by this point, so a
+            //    failure here is reported without implying the shipment failed.
+            btn.textContent = 'Sender besked...';
+            const mailRes = await fetch(`${supabaseUrl}/functions/v1/send-shipping-notification`, {
+                method: 'POST', headers: authHeaders, body: JSON.stringify({ order_id: orderId }),
+            });
+
+            if (!mailRes.ok) {
+                const err = await mailRes.json().catch(() => ({}));
+                alert(`Forsendelsen er oprettet (${shipData.tracking_number || 'uden nummer'}), men beskeden til kunden fejlede: ${err.error || 'Ukendt fejl'}`);
+            }
+
+            loadOrders();
+        }
+
+        // Labels are stored on the order, so they can be reprinted without
+        // going back to Shipmondo.
+        async function openLabel(orderId) {
+            const { data, error } = await client
+                .from('orders')
+                .select('label_base64')
+                .eq('order_id', orderId)
+                .single();
+
+            if (error || !data || !data.label_base64) {
+                alert('Forsendelsen findes, men label kunne ikke hentes. Du kan printe den i Shipmondo.');
+                return;
+            }
+
+            const binary = atob(data.label_base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+
+            window.open(url, '_blank');
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
         }
 
         async function deleteProduct(id) {
