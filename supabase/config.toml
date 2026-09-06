@@ -22,6 +22,10 @@ verify_jwt = false
 [functions.pickup-points]
 verify_jwt = false
 
+# create-shipment is called from the admin panel with the signed-in session
+# token, so it keeps JWT verification on - only a logged-in admin may book a
+# real GLS parcel.
+
 # send-shipping-notification deliberately keeps JWT verification on: the admin
 # panel calls it with the logged-in session's access token, so only a signed-in
 # admin can trigger a shipping email.
