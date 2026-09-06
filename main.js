@@ -188,7 +188,6 @@ if (typeof supabase !== 'undefined') {
 // --- CONFIGURATION ---
 const SHIPPING_THRESHOLD = 1500;
 const SHIPPING_COST_SHOP = 39;
-const SHIPPING_COST_HOME = 59;
 
 // --- TRANSLATIONS ---
 const TRANSLATIONS = {
@@ -235,7 +234,6 @@ const TRANSLATIONS = {
         checkout_btn: "Gå til kassen",
         shipping_method: "Levering",
         ship_shop: "Pakkeshop (GLS) - 39 kr",
-        ship_home: "Hjemmelevering - 59 kr",
         free_shipping: "Gratis fragt",
         select_shop: "Søg Pakkeshops",
         change_shop: "Søg Igen",
@@ -834,15 +832,10 @@ function initCartPage() {
 
                     <div class="form-group" style="margin-top: 1.5rem;">
                         <label class="form-label">${t('shipping_method')}</label>
-                        <div style="border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden;">
-                            <label style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid var(--color-border); cursor: pointer; background: var(--color-bg-subtle);">
-                                <input type="radio" name="shipping" value="shop" checked style="margin-right: 1rem;">
-                                <span>${t('ship_shop')}</span>
-                            </label>
-                            <label style="display: flex; align-items: center; padding: 1rem; cursor: pointer; background: var(--color-bg-subtle);">
-                                <input type="radio" name="shipping" value="home" style="margin-right: 1rem;">
-                                <span>${t('ship_home')}</span>
-                            </label>
+                        <!-- Pakkeshop is the only method offered, so it is stated rather than chosen -->
+                        <input type="hidden" name="shipping" value="shop">
+                        <div style="border: 1px solid var(--color-border); border-radius: 4px; padding: 1rem; background: var(--color-bg-subtle);">
+                            <span>${t('ship_shop')}</span>
                         </div>
                         
                         <div id="shop-selector-wrapper" style="display: block; margin-top: 1rem; padding: 1rem; background: var(--color-bg-subtle); border-radius: 4px;">
@@ -873,7 +866,6 @@ function initCartPage() {
         `;
 
         // Handle Shipping Selection Logic
-        const shippingInputs = document.querySelectorAll('input[name="shipping"]');
         const shippingDisplay = document.getElementById('shipping-display');
         const totalDisplay = document.getElementById('total-display');
         const shopWrapper = document.getElementById('shop-selector-wrapper');
@@ -952,23 +944,6 @@ function initCartPage() {
 
         searchBtn.addEventListener('click', fetchPickupPoints);
 
-        shippingInputs.forEach(input => {
-            input.addEventListener('change', (e) => {
-                const isShop = e.target.value === 'shop';
-                if (shopWrapper) shopWrapper.style.display = isShop ? 'block' : 'none';
-
-                if (subtotal > SHIPPING_THRESHOLD) {
-                    shippingCost = 0;
-                    shippingDisplay.textContent = t('free_shipping');
-                } else {
-                    // 39 for shop, 59 for home
-                    shippingCost = isShop ? SHIPPING_COST_SHOP : SHIPPING_COST_HOME;
-                    shippingDisplay.textContent = `DKK ${shippingCost}`;
-                }
-                totalDisplay.textContent = `DKK ${(subtotal + shippingCost).toLocaleString('da-DK')}`;
-            });
-        });
-        
         // Trigger initial calculation check for free shipping
         if (subtotal > SHIPPING_THRESHOLD) {
             shippingCost = 0;

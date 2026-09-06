@@ -7,7 +7,6 @@ const SITE_URL = 'https://www.kolofon.dk';
 // charge is worked out from these, not from anything the page sends.
 const SHIPPING_THRESHOLD = 1500;
 const SHIPPING_COST_SHOP = 39;
-const SHIPPING_COST_HOME = 59;
 
 Deno.serve(async (req: Request) => {
   // CORS preflight
@@ -129,12 +128,12 @@ Deno.serve(async (req: Request) => {
     }
 
     // ---- Shipping, also worked out here rather than trusted ----
-    const method = shippingDetails.method === 'home' ? 'home' : 'shop';
-    const shippingCost = subtotal > SHIPPING_THRESHOLD
-      ? 0
-      : (method === 'home' ? SHIPPING_COST_HOME : SHIPPING_COST_SHOP);
+    // Pakkeshop is the only method on sale. The request's method is ignored
+    // rather than trusted, so a crafted one cannot pick a rate that is not offered.
+    const method = 'shop';
+    const shippingCost = subtotal > SHIPPING_THRESHOLD ? 0 : SHIPPING_COST_SHOP;
 
-    if (method === 'shop' && !shippingDetails.servicePoint) {
+    if (!shippingDetails.servicePoint) {
       return new Response(JSON.stringify({ error: 'Vælg venligst en pakkeshop' }), {
         status: 400,
         headers: corsHeaders,
