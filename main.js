@@ -188,10 +188,8 @@ if (typeof supabase !== 'undefined') {
 
 // --- CONFIGURATION ---
 const SHIPPING_THRESHOLD = 1500;
-// TEMPORARY - lowered for a live test purchase so little money is tied up
-// waiting on a PensoPay refund. RESTORE TO 39 AND 59 BEFORE TAKING REAL ORDERS.
-const SHIPPING_COST_SHOP = 1;  // real value: 39
-const SHIPPING_COST_HOME = 1;  // real value: 59
+const SHIPPING_COST_SHOP = 39;
+const SHIPPING_COST_HOME = 59;
 
 // --- TRANSLATIONS ---
 const TRANSLATIONS = {
