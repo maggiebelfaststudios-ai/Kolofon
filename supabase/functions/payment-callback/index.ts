@@ -107,16 +107,23 @@ Deno.serve(async (req: Request) => {
 
       // Notify admin
       if (RESEND_API_KEY) {
-        await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_API_KEY}` },
-          body: JSON.stringify({
-            from: 'Kolofon Orders <onboarding@resend.dev>',
-            to: 'simonlsamuelsen@gmail.com',
-            subject: `New order — ${resource.order_id} — DKK ${total}`,
-            text: `New order received!\n\nOrder ID: ${resource.order_id}\nCustomer: ${customerData.fullName} (${customerData.email})\nTotal: DKK ${total}\n\nItems:\n${itemList}\n\nShipping: ${shippingLabel}\n\nLog in to PensoPay to capture the payment.`,
-          }),
-        }).catch(err => console.error('Failed to send admin email:', err));
+        try {
+          const emailRes = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_API_KEY}` },
+            body: JSON.stringify({
+              from: 'Kolofon <ordre@kolofon.dk>',
+              to: 'simonlsamuelsen@gmail.com',
+              subject: `New order — ${resource.order_id} — DKK ${total}`,
+              text: `New order received!\n\nOrder ID: ${resource.order_id}\nCustomer: ${customerData.fullName} (${customerData.email})\nTotal: DKK ${total}\n\nItems:\n${itemList}\n\nShipping: ${shippingLabel}\n\nLog in to PensoPay to capture the payment.`,
+            }),
+          });
+          if (!emailRes.ok) {
+            console.error('Admin email rejected by Resend:', emailRes.status, await emailRes.text());
+          }
+        } catch (err) {
+          console.error('Failed to send admin email:', err);
+        }
       }
     }
 
@@ -131,16 +138,26 @@ Deno.serve(async (req: Request) => {
 
       // Send customer confirmation email
       if (RESEND_API_KEY) {
-        await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_API_KEY}` },
-          body: JSON.stringify({
-            from: 'Kolofon Orders <onboarding@resend.dev>',
-            to: customerData.email,
-            subject: `Ordrebekræftelse — ${resource.order_id}`,
-            text: `Hej ${customerData.fullName},\n\nTak for din ordre! Vi har modtaget din betaling og er i gang med at klargøre din forsendelse.\n\nOrdre ID: ${resource.order_id}\nTotal: DKK ${total}\n\nVarer:\n${itemList}\n\nLevering: ${shippingLabel}\n\nDu vil modtage en besked, når pakken er afsendt.\n\nMed venlig hilsen\nKolofon`,
-          }),
-        }).catch(err => console.error('Failed to send customer email:', err));
+        try {
+          const emailRes = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_API_KEY}` },
+            body: JSON.stringify({
+              from: 'Kolofon <ordre@kolofon.dk>',
+              to: customerData.email,
+              subject: `Ordrebekræftelse — ${resource.order_id}`,
+              text: `Hej ${customerData.fullName},\n\nTak for din ordre! Jeg har modtaget din betaling og er i gang med at klargøre din forsendelse.\n\nOrdre ID: ${resource.order_id}\nTotal: DKK ${total}\n\nVarer:\n${itemList}\n\nLevering: ${shippingLabel}\n\nDu vil modtage en besked, når pakken er afsendt.\n\nMed venlig hilsen\nKolofon`,
+            }),
+          });
+          // fetch only rejects on a network failure. A refusal from Resend
+          // arrives as an ordinary response, so it has to be checked, or the
+          // email silently never sends and nothing is logged.
+          if (!emailRes.ok) {
+            console.error('Customer email rejected by Resend:', emailRes.status, await emailRes.text());
+          }
+        } catch (err) {
+          console.error('Failed to send customer email:', err);
+        }
       }
     }
 

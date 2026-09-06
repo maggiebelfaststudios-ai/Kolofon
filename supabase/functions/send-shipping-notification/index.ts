@@ -59,7 +59,7 @@ Deno.serve(async (req: Request) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_API_KEY}` },
       body: JSON.stringify({
-        from: 'Kolofon Orders <onboarding@resend.dev>',
+        from: 'Kolofon <ordre@kolofon.dk>',
         to: order.email,
         subject: `Din pakke er på vej — ${order_id}`,
         text: `Hej ${customer.fullName},\n\nDin ordre er nu afsendt!\n\nOrdre ID: ${order_id}\nTotal: DKK ${order.total}\n\nVarer:\n${itemList}\n\nLevering: ${shippingLabel}\n\nDu vil modtage en track & trace besked direkte fra GLS.\n\nMed venlig hilsen\nKolofon`,
