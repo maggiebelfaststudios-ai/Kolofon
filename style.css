@@ -17,30 +17,6 @@
 }
 
 /* ===== DARK MODE ===== */
-[data-theme="dark"] {
-    --color-bg: #111111;
-    --color-bg-subtle: #1a1a1a;
-    --color-text: #f5f5f5;
-    --color-text-muted: #999999;
-    --color-border: #333333;
-}
-
-[data-theme="dark"] .navbar {
-    background: rgba(17, 17, 17, 0.9);
-}
-
-[data-theme="dark"] .logo-img {
-    filter: invert(1);
-}
-
-[data-theme="dark"] .site-footer {
-    background: #0a0a0a;
-}
-
-[data-theme="dark"] #lang-btn {
-    color: #f5f5f5;
-}
-
 /* Reset & Base */
 *, *::before, *::after {
     margin: 0;
@@ -398,16 +374,6 @@ body {
 
 
 /* ===== VIEWER ANIMATIONS ===== */
-.viewer-exit-left {
-    transform: translateX(-100px);
-    opacity: 0;
-}
-
-.viewer-exit-right {
-    transform: translateX(100px);
-    opacity: 0;
-}
-
 .viewer-enter-right {
     transform: translateX(100px);
     opacity: 0;
@@ -507,28 +473,6 @@ body {
 .btn-add-to-cart .btn-icon { display: inline-flex; }
 .btn-icon { display: none; }
 
-/* Product page photo / video — mobile base styles */
-#product-photo-wrap,
-#product-video-wrap {
-    width: 100%;
-    margin-top: 1.5rem;
-}
-
-#product-photo {
-    width: 100%;
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
-    display: block;
-}
-
-#product-video {
-    width: 100%;
-    aspect-ratio: 4 / 3;
-    display: block;
-    object-fit: cover;
-    filter: grayscale(100%);
-}
-
 /* ===== DESKTOP SCALING (Min-Width) ===== */
 @media (min-width: 1024px) {
     .navbar { padding: 0 3rem; }
@@ -545,10 +489,6 @@ body {
        drawing, so cover would crop its top and bottom */
     .details-column { grid-column: 2; grid-row: 1 / -1; border-left: 1px solid var(--color-border); background-size: contain; }
     .details-content { max-width: 480px; margin: 0 auto; width: 100%; }
-    #product-photo-wrap { flex: 1; min-height: 0; margin-top: 0; margin-left: -4rem; margin-right: -4rem; margin-bottom: -4rem; }
-    #product-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
-    #product-video-wrap { flex: 1; min-height: 0; margin-top: 0; margin-left: -4rem; margin-right: -4rem; margin-bottom: -4rem; }
-    #product-video { width: 100%; height: 100%; display: block; object-fit: cover; filter: grayscale(100%); }
     
     /* Reset action area and button for desktop */
     .action-area {
@@ -608,11 +548,6 @@ body {
 }
 
 /* Invert photos in dark mode */
-[data-theme="dark"] #home-video-1 img,
-[data-theme="dark"] #home-video-2 img {
-    filter: grayscale(100%) invert(1);
-}
-
 .home-video-panel video,
 .home-video-panel img {
     flex: 1;

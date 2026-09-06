@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initViewportFix();
     initPageTransitions();
     initLanguage();
-    initTheme();
     updateCartCount();
     initFooterYear();
     initHomeVideos();
@@ -198,8 +197,6 @@ const TRANSLATIONS = {
         nav_products: "Produkter",
         nav_about: "Om os",
         nav_contact: "Kontakt",
-        index_title: "Velkommen til Kolofon.",
-        index_text: "Vi forvandler digital præcision til fysisk nærvær og skaber premium akrylvægkunst, der ikke bare observeres, men opleves.",
         cart_title: "Din Kurv",
         cart_empty: "Din kurv er tom.",
         cart_browse: "Se Kollektion",
@@ -209,13 +206,8 @@ const TRANSLATIONS = {
         about_text_3: "Vi inviterer dig til at udforske vores kollektion og finde det værk, der resonerer med dit rum.",
         contact_title: "Kontakt Mig",
         contact_text: "Har du spørgsmål om en ordre eller en speciel forespørgsel? Jeg er her for at hjælpe.",
-        contact_message: "Besked",
-        contact_send: "Send Besked",
-        contact_success: "Tak for din besked. Vi vender tilbage hurtigst muligt.",
-        contact_error: "Der opstod en fejl. Prøv venligst igen.",
 
         // Dynamic strings
-        stock_in: "På Lager",
         stock_out: "Ikke på lager",
         stock_left: "På lager ({qty} tilbage)",
         add_to_cart: "Læg i Kurv",
@@ -257,94 +249,14 @@ const TRANSLATIONS = {
         dimensions: "Dimensioner",
         material: "Materiale",
         footer_contact: "Kontakt",
-        footer_follow: "Følg Os",
         footer_legal: "Juridisk",
         footer_terms: "Handelsbetingelser",
-        footer_privacy: "Privatlivspolitik",
         footer_rights: "Alle rettigheder forbeholdes.",
         terms_agree: "Jeg accepterer",
         terms_link: "handelsbetingelserne",
         terms_and: "og",
         privacy_link: "privatlivspolitikken"
     },
-    en: {
-        nav_home: "Home",
-        nav_products: "Products",
-        nav_about: "About",
-        nav_contact: "Contact",
-        index_title: "Welcome to Kolofon.",
-        index_text: "We transform digital precision into physical presence, creating premium acrylic wall art that is not just observed, but experienced.",
-        cart_title: "Your Cart",
-        cart_empty: "Your cart is empty.",
-        cart_browse: "Browse Collection",
-        about_title: "About Kolofon",
-        about_text_1: "Kolofon represents the intersection of digital precision and physical presence. We believe that wall art should not just be observed, but experienced.",
-        about_text_2: "Our premium acrylic pieces are crafted to capture light and depth, transforming the atmosphere of any room. Born from a desire to bring gallery-quality aesthetics into the modern home, every piece in our collection is a study in form and function.",
-        about_text_3: "We invite you to explore our collection and find the piece that resonates with your space.",
-        contact_title: "Contact Us",
-        contact_text: "Have a question about an order or a custom request? We're here to help.",
-        contact_message: "Message",
-        contact_send: "Send Message",
-        contact_success: "Thank you for your message. We will get back to you shortly.",
-        contact_error: "Something went wrong. Please try again.",
-
-        // Dynamic strings
-        stock_in: "In Stock",
-        stock_out: "Out of Stock",
-        stock_left: "In Stock ({qty} left)",
-        add_to_cart: "Add to Cart",
-        added: "Added",
-        out_of_stock_msg: "Sorry, this item is out of stock.",
-        low_stock_msg: "Sorry, we only have {qty} units of this item in stock.",
-        checkout_title: "Checkout",
-        full_name: "Full Name",
-        email: "Email",
-        phone: "Phone",
-        address: "Address",
-        city: "City",
-        zip: "Zip Code",
-        total: "Total",
-        complete_purchase: "Complete Purchase",
-        cancel: "Cancel",
-        processing: "Processing...",
-        thank_you: "Thank You!",
-        order_received: "Your order has been placed successfully.",
-        continue_shopping: "Continue Shopping",
-        payment_error: "There was an issue processing your order. Please try again.",
-        subtotal: "Subtotal",
-        shipping: "Shipping",
-        shipping_calc: "Calculated at checkout",
-        checkout_btn: "Checkout",
-        shipping_method: "Delivery",
-        ship_shop: "Parcel Shop (GLS) - DKK 39",
-        ship_home: "Home Delivery - DKK 59",
-        free_shipping: "Free Shipping",
-        select_shop: "Search Parcel Shops",
-        change_shop: "Search Again",
-        shop_required: "You must select a parcel shop to continue.",
-        no_shop_selected: "No parcel shop selected",
-        loading_shops: "Searching...",
-        no_shops_found: "No parcel shops found for this zip code.",
-        enter_zip_first: "Please enter a zip code first.",
-        shop_fetch_error: "Could not load parcel shops. Please try again.",
-        remove: "Remove",
-        dimensions: "Dimensions",
-        material: "Material",
-        footer_contact: "Contact",
-        footer_follow: "Follow Us",
-        footer_legal: "Legal",
-        footer_terms: "Terms and Conditions",
-        footer_privacy: "Privacy Policy",
-        footer_rights: "All rights reserved.",
-        terms_agree: "I agree to the",
-        terms_link: "terms and conditions",
-        terms_and: "and",
-        privacy_link: "privacy policy",
-
-        // Product Descriptions (English overrides)
-        desc_1770319091415: "A stringent and pattern-breaking interpretation of Orwell's timeless classic.",
-        desc_1770319395363: "A deconstruction of Dostoevsky's great work, depicting the tension between the intellectual and the conscience."
-    }
 };
 
 // Danish only - the language switcher was removed.
@@ -437,17 +349,6 @@ function initLanguage() {
     document.querySelectorAll('[data-i18n-link="terms"]').forEach(el => {
         el.textContent = t('footer_terms');
     });
-}
-
-/**
- * Force light mode.
- * The dark-mode toggle was removed, so this also clears any preference a
- * returning visitor saved earlier - otherwise they would be stuck in dark.
- */
-function initTheme() {
-    document.documentElement.removeAttribute('data-theme');
-    localStorage.removeItem('kolofon_theme');
-    localStorage.removeItem('kolofon_lang');
 }
 
 function updateCartCount() {
