@@ -1,0 +1,27 @@
+project_id = "jxprvsfrsnikzkophoty"
+
+# Edge Functions enforce a Supabase JWT by default. These three are called by
+# parties that cannot present one, so verification is turned off per function
+# and each authenticates by its own means instead.
+
+# Called server-to-server by PensoPay, which signs the request body with
+# HMAC-SHA256 and sends it as the Pensopay-Signature header. The function
+# verifies that itself and answers 403 on a mismatch, so the signature is the
+# real authentication here - a JWT PensoPay has no way to obtain would only
+# block it. Leaving this on caused every callback to be rejected at the
+# gateway with 401 UNAUTHORIZED_NO_AUTH_HEADER before the function ran, so
+# orders were never saved and stock never decremented.
+[functions.payment-callback]
+verify_jwt = false
+
+# Called from the browser during checkout, with no auth header.
+[functions.create-payment]
+verify_jwt = false
+
+# Called from the browser to look up GLS pickup points, with no auth header.
+[functions.pickup-points]
+verify_jwt = false
+
+# send-shipping-notification deliberately keeps JWT verification on: the admin
+# panel calls it with the logged-in session's access token, so only a signed-in
+# admin can trigger a shipping email.
