@@ -22,6 +22,9 @@ verify_jwt = false
 [functions.pickup-points]
 verify_jwt = false
 
+[functions.create-shipment]
+verify_jwt = true
+
 # create-shipment is called from the admin panel with the signed-in session
 # token, so it keeps JWT verification on - only a logged-in admin may book a
 # real GLS parcel.
