@@ -824,7 +824,7 @@ textarea.form-input {
     max-width: 900px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr auto auto;
     gap: 2rem;
     text-align: left;
 }
@@ -1035,4 +1035,41 @@ body.page-fade-out {
         overflow-x: visible;
     }
     .recommendation-card { flex: 0 0 240px; }
+}
+
+/* ===== INSTAGRAM LINKS ===== */
+/* Icon and handle on one line, without the icon shifting the baseline */
+.social-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+/* Home page: under the call to action, above the video overlays */
+.home-social {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.home-social a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.85rem;
+    color: var(--color-text);
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+}
+
+.home-social a:hover { opacity: 0.6; }
+
+/* Once the video plays, the panel behind these turns dark */
+.home-text-panel.video-playing .home-social a { color: #FFFFFF; }
+
+@media (max-width: 560px) {
+    /* Three footer columns will not fit a narrow phone */
+    .footer-content { grid-template-columns: 1fr; }
 }
