@@ -194,7 +194,7 @@ const TRANSLATIONS = {
     da: {
         nav_home: "Hjem",
         nav_products: "Produkter",
-        nav_about: "Om os",
+        nav_about: "Om mig",
         nav_contact: "Kontakt",
         cart_title: "Din Kurv",
         cart_empty: "Din kurv er tom.",
