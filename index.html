@@ -40,9 +40,10 @@
 
     <!-- Main Content -->
     <main class="home-stage">
-        <!-- Desktop plays both at once, one at each edge. Mobile shows only
-             the first, which cycles through both clips. -->
+        <!-- Desktop lines all three up across the stage. Mobile shows the
+             left one only, which alternates with the right one's clip. -->
         <video class="home-bg-video home-bg-video--left" muted playsinline preload="metadata"></video>
+        <video class="home-bg-video home-bg-video--center" muted playsinline preload="metadata"></video>
         <video class="home-bg-video home-bg-video--right" muted playsinline preload="metadata"></video>
 
         <div class="home-overlay">

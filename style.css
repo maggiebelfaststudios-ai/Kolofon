@@ -556,6 +556,11 @@ body {
     opacity: 1;
 }
 
+/* The centre clip is part of the desktop row; phones never load it */
+.home-bg-video--center {
+    display: none;
+}
+
 /* Some mobile browsers overlay their own play button */
 .home-bg-video::-webkit-media-controls,
 .home-bg-video::-webkit-media-controls-start-playback-button {
@@ -590,13 +595,16 @@ body {
     color: #FFFFFF;
 }
 
-/* Desktop plays both clips at once, one flush to each edge. Each takes the
-   full height at its own proportions - width: auto means the element itself
-   matches the clip's shape, so nothing is trimmed and nothing is stretched. */
+/* Desktop plays all three clips at once, spread across the stage. Each takes
+   the full height at its own proportions - width: auto means the element
+   itself matches the clip's shape, so nothing is trimmed or stretched. The
+   third-width cap keeps them from overlapping on a short or narrow window,
+   where three full-height portrait clips would be wider than the screen. */
 @media (min-width: 1024px) {
     .home-bg-video {
         inset: 0 auto 0 0; /* anchored left */
         width: auto;
+        max-width: 33.333%;
         height: 100%;
         object-fit: contain;
     }
@@ -605,6 +613,12 @@ body {
     .home-bg-video,
     .home-bg-video.is-active {
         opacity: 1;
+    }
+
+    .home-bg-video--center {
+        display: block;
+        inset: 0 auto 0 50%;
+        transform: translateX(-50%); /* centre on its own width */
     }
 
     .home-bg-video--right {

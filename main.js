@@ -144,6 +144,7 @@ function formatPrice(value) {
 function initHomeVideos() {
     const left = document.querySelector('.home-bg-video--left');
     const right = document.querySelector('.home-bg-video--right');
+    const centre = document.querySelector('.home-bg-video--center');
     if (!left || !right) return;
 
     const wide = window.matchMedia('(min-width: 1024px)');
@@ -183,8 +184,14 @@ function initHomeVideos() {
         right.removeEventListener('ended', rightEnded);
 
         if (wide.matches) {
-            // Side by side, so each simply loops its own clip
-            [left, right].forEach(v => {
+            // Three across, each looping its own clip. The centre one is only
+            // given a src here, so phones never download a clip they hide.
+            if (centre && !centre.getAttribute('src')) {
+                centre.src = 'video_material/1984akrylthumvideo.mp4';
+            }
+            [left, centre, right].forEach(v => {
+                if (!v) return;
+                v.muted = true;
                 v.loop = true;
                 v.classList.add('is-active');
                 v.play().catch(() => {});
@@ -192,6 +199,11 @@ function initHomeVideos() {
         } else {
             // One at a time, taking turns. No loop: a looping video never
             // fires "ended", so it would never hand over.
+            if (centre) {
+                centre.pause();
+                centre.removeAttribute('src');
+                centre.load(); // stop it fetching a clip nobody can see
+            }
             left.loop = false;
             right.loop = false;
             right.pause();
@@ -208,8 +220,8 @@ function initHomeVideos() {
 
     // Browsers often refuse autoplay until the visitor interacts
     const retry = () => {
-        [left, right].forEach(v => {
-            if (v.paused && v.classList.contains('is-active')) v.play().catch(() => {});
+        [left, centre, right].forEach(v => {
+            if (v && v.paused && v.classList.contains('is-active')) v.play().catch(() => {});
         });
     };
     document.addEventListener('touchstart', retry, { once: true });
