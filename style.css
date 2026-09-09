@@ -579,6 +579,13 @@ body {
     color: #FFFFFF;
 }
 
+/* Desktop shows the clip at its own proportions rather than filling the
+   width, so nothing is trimmed. It scales until its top and bottom meet the
+   header and footer lines, leaving the stage colour down the sides. */
+@media (min-width: 1024px) {
+    .home-bg-video { object-fit: contain; }
+}
+
 /* ===== CONTENT PAGES (About, Contact, Account) ===== */
 .content-page {
     padding: 6rem 1.5rem 2rem; /* Top padding accounts for navbar */
