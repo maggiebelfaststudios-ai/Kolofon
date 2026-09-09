@@ -520,120 +520,63 @@ body {
     .info-box .action-area { max-width: 320px; margin: 1rem 0 0; }
 }
 
-/* ===== HOME STAGE (video grid layout) ===== */
-
-/* Mobile: stack center elements, hide side panels */
+/* ===== HOME STAGE ===== */
+/* One player filling the screen. main.js swaps its source when each clip
+   ends, so the pair cycles. */
 .home-stage {
-    display: flex;
-    flex-direction: column;
-    min-height: calc(100dvh - var(--navbar-height));
-}
-
-/* Mobile shows one video at a time; main.js hands over to the other when
-   each ends, so the pair alternates on repeat. */
-#home-video-1,
-#home-video-2 {
-    display: none;
-}
-
-/* Written with the ids: .home-video-panel.is-playing alone is two classes and
-   loses to the id selector above, so the panel would never appear. */
-#home-video-1.is-playing,
-#home-video-2.is-playing {
-    display: flex;
-    height: 45svh;
-}
-
-.home-video-panel {
-    overflow: hidden;
-    background: #111;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Photo panels follow the page theme */
-#home-video-1,
-#home-video-2 {
-    background: var(--color-bg);
-}
-
-/* Invert photos in dark mode */
-.home-video-panel video,
-.home-video-panel img {
-    flex: 1;
-    min-height: 0;
-    width: 100%;
-    object-fit: contain; /* whole frame, never cropped */
-    filter: grayscale(100%);
-    transition: opacity 0.3s ease;
-}
-
-/* Hide native browser play button overlay on mobile */
-.home-video-panel video::-webkit-media-controls {
-    display: none !important;
-}
-.home-video-panel video::-webkit-media-controls-start-playback-button {
-    display: none !important;
-}
-
-
-.home-text-panel {
-    flex: 1;
     position: relative;
+    height: calc(100dvh - var(--navbar-height));
     overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: #111;
+}
+
+.home-bg-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    /* cover fills the screen. The trade-off is that a clip shaped
+       differently to the window gets trimmed rather than letterboxed. */
+    object-fit: cover;
+    filter: grayscale(100%);
+    z-index: 0;
+}
+
+/* Some mobile browsers overlay their own play button */
+.home-bg-video::-webkit-media-controls,
+.home-bg-video::-webkit-media-controls-start-playback-button {
+    display: none !important;
+}
+
+/* Soft gradient so the button and handles stay legible over any frame */
+.home-stage::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 45%;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0));
+    z-index: 1;
+    pointer-events: none;
+}
+
+.home-overlay {
+    position: relative;
+    z-index: 2;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-end; /* slider sits at the bottom of the panel */
+    padding: 0 1.5rem 3rem;
     text-align: center;
-    padding: 2.5rem 1.5rem;
-    background: var(--color-bg);
-    border-top: 1px solid var(--color-border);
-    border-bottom: 1px solid var(--color-border);
 }
 
-
-/* Button floats above the video overlays */
-.home-text-panel .home-cta {
-    position: relative;
-    z-index: 2;
-}
-
-/*
- * Desktop: single flat CSS grid — photos left and right, text in centre.
- *
- *   col 1    | col 2    | col 3
- *   video-1  | text     | video-2   row 1 (1fr)
- */
-@media (min-width: 1024px) {
-    .home-stage {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        grid-template-rows: 1fr;
-        height: calc(100dvh - var(--navbar-height));
-        min-height: auto;
-    }
-
-    #home-video-1 {
-        display: flex;
-        grid-column: 1;
-        grid-row: 1;
-    }
-
-    .home-text-panel {
-        grid-column: 2;
-        grid-row: 1;
-        flex: unset;
-        padding: 2.5rem 2rem;
-        border: none;
-    }
-
-    #home-video-2 {
-        display: flex;
-        grid-column: 3;
-        grid-row: 1;
-    }
-
+/* Always over darkened video, so these are light rather than theme-coloured */
+.home-overlay .home-social a {
+    color: #FFFFFF;
 }
 
 /* ===== CONTENT PAGES (About, Contact, Account) ===== */

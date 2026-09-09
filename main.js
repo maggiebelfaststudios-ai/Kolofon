@@ -142,66 +142,33 @@ function formatPrice(value) {
 }
 
 function initHomeVideos() {
-    const videos = Array.from(document.querySelectorAll('.home-panel-video'));
-    if (!videos.length) return;
+    const video = document.querySelector('.home-bg-video');
+    if (!video) return;
 
-    const wide = window.matchMedia('(min-width: 1024px)');
-    let current = 0;
+    const clips = [
+        'video_material/_MV00220.mp4',
+        'video_material/_MV00220_1.mp4',
+    ];
+    let index = 0;
 
-    const panelOf = (v) => v.closest('.home-video-panel');
-
-    // Desktop shows both at once, so each simply loops on its own.
-    const playBoth = () => {
-        videos.forEach(v => {
-            panelOf(v).classList.add('is-playing');
-            v.loop = true;
-            v.muted = true;
-            v.play().catch(() => {});
-        });
+    const playCurrent = () => {
+        video.src = clips[index];
+        video.muted = true;
+        video.play().catch(() => {}); // autoplay may be refused; retried below
     };
 
-    // Mobile has room for one, so they take turns: each hands over to the
-    // next when it ends, and the pair repeats indefinitely.
-    const showOne = (index) => {
-        videos.forEach((v, n) => {
-            const active = n === index;
-            panelOf(v).classList.toggle('is-playing', active);
-            v.loop = false; // looping would never fire "ended", so nothing would hand over
-            v.muted = true;
-            if (active) {
-                v.currentTime = 0;
-                v.play().catch(() => {});
-            } else {
-                v.pause();
-            }
-        });
-    };
+    // Deliberately no loop attribute: a looping video never fires "ended",
+    // so it would play the first clip forever and never reach the second.
+    video.addEventListener('ended', () => {
+        index = (index + 1) % clips.length;
+        playCurrent();
+    });
 
-    const handOver = () => {
-        current = (current + 1) % videos.length;
-        showOne(current);
-    };
+    playCurrent();
 
-    const apply = () => {
-        videos.forEach(v => v.removeEventListener('ended', handOver));
-        if (wide.matches) {
-            playBoth();
-        } else {
-            videos.forEach(v => v.addEventListener('ended', handOver));
-            current = 0;
-            showOne(0);
-        }
-    };
-
-    apply();
-    wide.addEventListener('change', apply);
-
-    // Autoplay is often refused until the visitor interacts with the page.
-    // Retry once on the first touch or click, but only for anything paused.
+    // Browsers often refuse autoplay until the visitor interacts
     const retry = () => {
-        videos.forEach(v => {
-            if (v.paused && panelOf(v).classList.contains('is-playing')) v.play().catch(() => {});
-        });
+        if (video.paused) video.play().catch(() => {});
     };
     document.addEventListener('touchstart', retry, { once: true });
     document.addEventListener('click', retry, { once: true });
