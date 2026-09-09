@@ -536,7 +536,10 @@ body {
     display: none;
 }
 
-.home-video-panel.is-playing {
+/* Written with the ids: .home-video-panel.is-playing alone is two classes and
+   loses to the id selector above, so the panel would never appear. */
+#home-video-1.is-playing,
+#home-video-2.is-playing {
     display: flex;
     height: 45svh;
 }
@@ -560,7 +563,7 @@ body {
     flex: 1;
     min-height: 0;
     width: 100%;
-    object-fit: cover;
+    object-fit: contain; /* whole frame, never cropped */
     filter: grayscale(100%);
     transition: opacity 0.3s ease;
 }
@@ -624,9 +627,6 @@ body {
         padding: 2.5rem 2rem;
         border: none;
     }
-
-    /* Both panels show at once here, whatever the mobile handover set */
-    .home-video-panel { display: flex; }
 
     #home-video-2 {
         display: flex;
