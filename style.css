@@ -672,8 +672,8 @@ textarea.form-input {
 }
 
 /* ===== HOME CALL TO ACTION ===== */
-/* Keeps the old slider's shape and weight - a dark pill with light
-   uppercase text - now as a plain link to the collection. */
+/* Keeps the old slider's shape and weight - a pill with uppercase
+   text - now as a plain link to the collection. */
 .home-cta {
     display: inline-flex;
     align-items: center;
@@ -682,8 +682,8 @@ textarea.form-input {
     max-width: 300px;
     height: 56px;
     margin: 2rem auto 0;
-    background: var(--color-text);
-    color: var(--color-bg);
+    background: var(--color-bg);
+    color: var(--color-text);
     border-radius: 28px;
     font-size: 0.875rem;
     text-transform: uppercase;
