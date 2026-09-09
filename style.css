@@ -579,6 +579,24 @@ body {
     color: #FFFFFF;
 }
 
+/* Desktop: the whole home page fits one screen, so the video runs from the
+   navigation down to the footer with nothing below the fold. The stage
+   flexes into whatever height is left rather than being a fixed size, so a
+   taller footer simply takes more of it. */
+@media (min-width: 1024px) {
+    body.home {
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    body.home .home-stage {
+        flex: 1;
+        height: auto;
+        min-height: 0;
+    }
+}
+
 /* ===== CONTENT PAGES (About, Contact, Account) ===== */
 .content-page {
     padding: 6rem 1.5rem 2rem; /* Top padding accounts for navbar */
