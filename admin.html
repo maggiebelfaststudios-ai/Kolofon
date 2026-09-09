@@ -8,6 +8,10 @@
     <link rel="stylesheet" href="https://use.typekit.net/hyx4cet.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Muxes the frames WebCodecs produces into a real MP4. Pinned, and
+         only ever used by media-optimiser.js, which checks it loaded. -->
+    <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.js"></script>
+    <script src="media-optimiser.js"></script>
     <style>
         .admin-container { max-width: 1000px; margin: 0 auto; padding: 2rem; }
         .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--color-border); }
@@ -402,9 +406,28 @@
 
             // Uploads one file and returns { fileName, publicUrl }, or null if it failed.
             async function uploadFile(imageFile, label) {
+                // Shrink it first. Product media never passes through git, so
+                // this is the only point where it can be caught. On any problem
+                // the original comes back and the upload proceeds as before.
+                if (window.MediaOptimiser) {
+                    const before = imageFile.size;
+                    const result = await window.MediaOptimiser.prepare(imageFile, (stage, ratio) => {
+                        submitBtn.textContent = ratio === null || ratio === 0
+                            ? stage + "..."
+                            : `${stage}... ${Math.round(ratio * 100)}%`;
+                    });
+                    imageFile = result.file;
+                    if (result.note) console.log(`${label} optimeret: ${result.note}`);
+                    else console.log(`${label} uploades som den er (${(before / 1048576).toFixed(1)} MB)`);
+                    submitBtn.textContent = "Uploader...";
+                }
+
                 const fileName = `${Date.now()}_${imageFile.name.replace(/\s+/g, '-')}`; // Clean filename
                 console.log(`Attempting to upload ${label}: ${fileName}`);
-                const { error: uploadError } = await client.storage.from('images').upload(fileName, imageFile);
+                // contentType stated outright rather than inferred, so a WebP that
+                // came out of the optimiser is always served as one.
+                const { error: uploadError } = await client.storage.from('images')
+                    .upload(fileName, imageFile, { contentType: imageFile.type || undefined });
                 if (uploadError) {
                     console.error(`Upload failed (${label}):`, uploadError);
                     alert('Fejl ved upload af fil: ' + uploadError.message);

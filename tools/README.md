@@ -57,3 +57,42 @@ Options:
 - **Caps the long edge at 1920 and short at 1080**, in case something larger
   ever gets dropped in. Anything already inside that is left at its own size.
 - **Keeps the original** if the re-encode somehow comes out bigger.
+
+---
+
+# Product media (admin page)
+
+Product photos and videos never pass through git — they go from the admin page
+straight into Supabase storage, so the hook above never sees them. They are
+handled instead by `media-optimiser.js`, which runs in the browser just before
+the upload starts. Nothing to remember; saving a product does it.
+
+**Photos** are drawn to a canvas at no more than 2000px on the long edge and
+re-encoded as WebP at quality 0.82. EXIF rotation is applied while decoding, so
+a portrait photo cannot arrive on its side.
+
+**Videos** are re-encoded with WebCodecs to H.264 at 2.5 Mbps, capped at
+1920x1080, with the index moved to the front — the same treatment the desktop
+tool gives. Frames are taken as they play, so a 15-second clip takes about
+15 seconds.
+
+## It always falls back
+
+Every failure hands the original file back and lets the upload continue, so the
+worst case is that nothing was saved:
+
+- browser missing WebCodecs, `createImageBitmap`, or `requestVideoFrameCallback`
+- the CDN muxer failing to load
+- no H.264 encoder (checked with `VideoEncoder.isConfigSupported`)
+- a file the browser cannot decode, HEIC being the likely one
+- a PNG on a browser with no WebP encoder — JPEG would lose its transparency
+- a result that came out **larger** than the original
+- a video whose re-encode does not come back the same length
+
+That last one is the important one. A clip that encodes but plays for two
+seconds instead of fifteen would be worse than no saving at all, so the output
+is loaded back and its duration checked before it is trusted.
+
+Run `node tools/test-media-optimiser.mjs` to exercise those paths.
+
+The admin page logs what happened to each file in the browser console.
