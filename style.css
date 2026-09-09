@@ -545,6 +545,11 @@ body {
     z-index: 0;
 }
 
+/* Mobile shows one player only; the second is for the desktop pair */
+.home-bg-video--right {
+    display: none;
+}
+
 /* Some mobile browsers overlay their own play button */
 .home-bg-video::-webkit-media-controls,
 .home-bg-video::-webkit-media-controls-start-playback-button {
@@ -579,11 +584,21 @@ body {
     color: #FFFFFF;
 }
 
-/* Desktop shows the clip at its own proportions rather than filling the
-   width, so nothing is trimmed. It scales until its top and bottom meet the
-   header and footer lines, leaving the stage colour down the sides. */
+/* Desktop plays both clips at once, one flush to each edge. Each takes the
+   full height at its own proportions - width: auto means the element itself
+   matches the clip's shape, so nothing is trimmed and nothing is stretched. */
 @media (min-width: 1024px) {
-    .home-bg-video { object-fit: contain; }
+    .home-bg-video {
+        inset: 0 auto 0 0; /* anchored left */
+        width: auto;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    .home-bg-video--right {
+        display: block;
+        inset: 0 0 0 auto; /* anchored right */
+    }
 }
 
 /* ===== CONTENT PAGES (About, Contact, Account) ===== */

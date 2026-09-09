@@ -40,8 +40,10 @@
 
     <!-- Main Content -->
     <main class="home-stage">
-        <!-- One player; main.js cycles it through the clips -->
-        <video class="home-bg-video" muted playsinline preload="metadata"></video>
+        <!-- Desktop plays both at once, one at each edge. Mobile shows only
+             the first, which cycles through both clips. -->
+        <video class="home-bg-video home-bg-video--left" muted playsinline preload="metadata"></video>
+        <video class="home-bg-video home-bg-video--right" muted playsinline preload="metadata"></video>
 
         <div class="home-overlay">
             <a href="products.html" class="home-cta">Se kollektionen</a>

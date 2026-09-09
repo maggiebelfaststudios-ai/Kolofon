@@ -142,33 +142,61 @@ function formatPrice(value) {
 }
 
 function initHomeVideos() {
-    const video = document.querySelector('.home-bg-video');
-    if (!video) return;
+    const left = document.querySelector('.home-bg-video--left');
+    const right = document.querySelector('.home-bg-video--right');
+    if (!left) return;
 
     const clips = [
         'video_material/_MV00220.mp4',
         'video_material/_MV00220_1.mp4',
     ];
+    const wide = window.matchMedia('(min-width: 1024px)');
     let index = 0;
 
-    const playCurrent = () => {
-        video.src = clips[index];
-        video.muted = true;
-        video.play().catch(() => {}); // autoplay may be refused; retried below
+    // Mobile only: hand the single player on to the next clip
+    const cycle = () => {
+        index = (index + 1) % clips.length;
+        left.src = clips[index];
+        left.play().catch(() => {});
     };
 
-    // Deliberately no loop attribute: a looping video never fires "ended",
-    // so it would play the first clip forever and never reach the second.
-    video.addEventListener('ended', () => {
-        index = (index + 1) % clips.length;
-        playCurrent();
-    });
+    const apply = () => {
+        left.removeEventListener('ended', cycle);
 
-    playCurrent();
+        if (wide.matches) {
+            // Both on screen, so each takes one clip and loops it
+            [left, right].forEach((v, i) => {
+                if (!v) return;
+                v.src = clips[i];
+                v.loop = true;
+                v.muted = true;
+                v.play().catch(() => {});
+            });
+        } else {
+            // Only one is visible, so it plays the clips in turn. No loop:
+            // a looping video never fires "ended", so it would never hand over.
+            if (right) {
+                right.pause();
+                right.removeAttribute('src');
+                right.load(); // stop it downloading a clip nobody can see
+            }
+            index = 0;
+            left.loop = false;
+            left.muted = true;
+            left.src = clips[0];
+            left.addEventListener('ended', cycle);
+            left.play().catch(() => {});
+        }
+    };
+
+    apply();
+    wide.addEventListener('change', apply);
 
     // Browsers often refuse autoplay until the visitor interacts
     const retry = () => {
-        if (video.paused) video.play().catch(() => {});
+        [left, right].forEach(v => {
+            if (v && v.paused && v.getAttribute('src')) v.play().catch(() => {});
+        });
     };
     document.addEventListener('touchstart', retry, { once: true });
     document.addEventListener('click', retry, { once: true });
