@@ -144,48 +144,62 @@ function formatPrice(value) {
 function initHomeVideos() {
     const left = document.querySelector('.home-bg-video--left');
     const right = document.querySelector('.home-bg-video--right');
-    if (!left) return;
+    if (!left || !right) return;
 
-    const clips = [
-        'video_material/_MV00220.mp4',
-        'video_material/_MV00220_1.mp4',
-    ];
     const wide = window.matchMedia('(min-width: 1024px)');
-    let index = 0;
 
-    // Mobile only: hand the single player on to the next clip
-    const cycle = () => {
-        index = (index + 1) % clips.length;
-        left.src = clips[index];
-        left.play().catch(() => {});
+    // Each player keeps one clip for the life of the page. Nothing reloads
+    // when they trade places, which is what makes the mobile switch instant.
+    left.src = 'video_material/_MV00220.mp4';
+    right.src = 'video_material/_MV00220_1.mp4';
+    [left, right].forEach(v => { v.muted = true; });
+
+    const activate = (show, hide) => {
+        show.classList.add('is-active');
+        show.play().catch(() => {});
+        if (!hide) return;
+        hide.classList.remove('is-active');
+        // Rewind once it is out of sight. Doing it now would show the clip
+        // jumping back to its first frame part way through the fade.
+        setTimeout(() => {
+            hide.pause();
+            try { hide.currentTime = 0; } catch (e) { /* not seekable yet */ }
+        }, 500);
+    };
+
+    const leftEnded = () => activate(right, left);
+    const rightEnded = () => activate(left, right);
+
+    // Fetch the second clip in full, but only once the first is playing, so
+    // the two downloads do not compete on a slow connection.
+    const bufferSecond = () => {
+        if (wide.matches) return;
+        right.preload = 'auto';
+        right.load();
     };
 
     const apply = () => {
-        left.removeEventListener('ended', cycle);
+        left.removeEventListener('ended', leftEnded);
+        right.removeEventListener('ended', rightEnded);
 
         if (wide.matches) {
-            // Both on screen, so each takes one clip and loops it
-            [left, right].forEach((v, i) => {
-                if (!v) return;
-                v.src = clips[i];
+            // Side by side, so each simply loops its own clip
+            [left, right].forEach(v => {
                 v.loop = true;
-                v.muted = true;
+                v.classList.add('is-active');
                 v.play().catch(() => {});
             });
         } else {
-            // Only one is visible, so it plays the clips in turn. No loop:
-            // a looping video never fires "ended", so it would never hand over.
-            if (right) {
-                right.pause();
-                right.removeAttribute('src');
-                right.load(); // stop it downloading a clip nobody can see
-            }
-            index = 0;
+            // One at a time, taking turns. No loop: a looping video never
+            // fires "ended", so it would never hand over.
             left.loop = false;
-            left.muted = true;
-            left.src = clips[0];
-            left.addEventListener('ended', cycle);
-            left.play().catch(() => {});
+            right.loop = false;
+            right.pause();
+            right.classList.remove('is-active');
+            left.addEventListener('ended', leftEnded);
+            right.addEventListener('ended', rightEnded);
+            activate(left, null);
+            left.addEventListener('playing', bufferSecond, { once: true });
         }
     };
 
@@ -195,7 +209,7 @@ function initHomeVideos() {
     // Browsers often refuse autoplay until the visitor interacts
     const retry = () => {
         [left, right].forEach(v => {
-            if (v && v.paused && v.getAttribute('src')) v.play().catch(() => {});
+            if (v.paused && v.classList.contains('is-active')) v.play().catch(() => {});
         });
     };
     document.addEventListener('touchstart', retry, { once: true });

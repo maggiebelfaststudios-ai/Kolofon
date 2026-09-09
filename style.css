@@ -545,9 +545,16 @@ body {
     z-index: 0;
 }
 
-/* Mobile shows one player only; the second is for the desktop pair */
-.home-bg-video--right {
-    display: none;
+/* Mobile shows one at a time, but both stay in place and only their opacity
+   changes. Pointing a single player at a new src tore down the frame while
+   the next file loaded, which showed as a black gap between clips. */
+.home-bg-video {
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.home-bg-video.is-active {
+    opacity: 1;
 }
 
 /* Some mobile browsers overlay their own play button */
@@ -595,8 +602,13 @@ body {
         object-fit: contain;
     }
 
+    /* Both play at once here, so neither is ever the hidden one */
+    .home-bg-video,
+    .home-bg-video.is-active {
+        opacity: 1;
+    }
+
     .home-bg-video--right {
-        display: block;
         inset: 0 0 0 auto; /* anchored right */
     }
 }
