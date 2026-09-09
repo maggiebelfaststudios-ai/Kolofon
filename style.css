@@ -561,6 +561,13 @@ body {
     display: none;
 }
 
+/* No clip configured for the centre slot, so it stays out of the row. This
+   outranks the desktop display: block below, so filling CENTRE_CLIP in
+   main.js is on its own enough to bring the slot back. */
+.home-bg-video--center:not([src]) {
+    display: none;
+}
+
 /* Some mobile browsers overlay their own play button */
 .home-bg-video::-webkit-media-controls,
 .home-bg-video::-webkit-media-controls-start-playback-button {
@@ -595,18 +602,23 @@ body {
     color: #FFFFFF;
 }
 
-/* Desktop plays all three clips at once, spread across the stage. Each takes
-   the full height at its own proportions - width: auto means the element
-   itself matches the clip's shape, so nothing is trimmed or stretched. The
-   third-width cap keeps them from overlapping on a short or narrow window,
-   where three full-height portrait clips would be wider than the screen. */
+/* Desktop plays the clips side by side across the stage. Each takes the full
+   height at its own proportions - width: auto means the element itself
+   matches the clip's shape, so nothing is trimmed or stretched. */
 @media (min-width: 1024px) {
     .home-bg-video {
         inset: 0 auto 0 0; /* anchored left */
         width: auto;
-        max-width: 33.333%;
         height: 100%;
         object-fit: contain;
+    }
+
+    /* Only once the centre slot is filled must three clips share the width.
+       Three full-height portrait clips are wider than a short or narrow
+       window, so cap each at a third to stop them overlapping. With just the
+       two there is room to spare and they keep their full height. */
+    .home-stage:has(.home-bg-video--center[src]) .home-bg-video {
+        max-width: 33.333%;
     }
 
     /* Both play at once here, so neither is ever the hidden one */

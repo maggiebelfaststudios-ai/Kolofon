@@ -149,6 +149,11 @@ function initHomeVideos() {
 
     const wide = window.matchMedia('(min-width: 1024px)');
 
+    // The desktop row has a centre slot waiting on the right clip. Put a path
+    // here to fill it - nothing else needs changing. While it is empty the
+    // slot is hidden and never fetched.
+    const CENTRE_CLIP = '';
+
     // Each player keeps one clip for the life of the page. Nothing reloads
     // when they trade places, which is what makes the mobile switch instant.
     left.src = 'video_material/_MV00220.mp4';
@@ -186,11 +191,11 @@ function initHomeVideos() {
         if (wide.matches) {
             // Three across, each looping its own clip. The centre one is only
             // given a src here, so phones never download a clip they hide.
-            if (centre && !centre.getAttribute('src')) {
-                centre.src = 'video_material/1984akrylthumvideo.mp4';
+            if (centre && CENTRE_CLIP && !centre.getAttribute('src')) {
+                centre.src = CENTRE_CLIP;
             }
             [left, centre, right].forEach(v => {
-                if (!v) return;
+                if (!v || !v.getAttribute('src')) return;
                 v.muted = true;
                 v.loop = true;
                 v.classList.add('is-active');
