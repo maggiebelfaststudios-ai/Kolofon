@@ -1,0 +1,35 @@
+#!/bin/sh
+#
+# Optimises any video being committed, before it is committed.
+#
+# The timing is the whole point. Git keeps every version of every file it has
+# ever been given, forever - so a 26 MB clip that is committed first and
+# optimised afterwards leaves the 26 MB in the repository permanently, and
+# everyone who clones it pays for that. Shrinking the file before the commit
+# is the only way the large version never gets recorded at all.
+
+staged_videos=$(git diff --cached --name-only --diff-filter=ACM | grep -iE '\.(mp4|mov|m4v|webm)$')
+[ -z "$staged_videos" ] && exit 0
+
+echo "Videos in this commit - checking whether they are ready for the web:"
+
+if ! command -v ffprobe >/dev/null 2>&1; then
+    echo ""
+    echo "  ffmpeg is not installed, so these are going in at their original size."
+    echo "  To have this happen automatically from now on, run once:"
+    echo ""
+    echo "      winget install --id Gyan.FFmpeg -e"
+    echo ""
+    echo "  then reopen your terminal. Committing anyway."
+    exit 0
+fi
+
+# shellcheck disable=SC2086
+node "$(git rev-parse --show-toplevel)/tools/optimise-video.mjs" $staged_videos || exit 0
+
+# The files on disk have been replaced, so restage them under the same names.
+echo "$staged_videos" | while IFS= read -r f; do
+    [ -f "$f" ] && git add -- "$f"
+done
+
+exit 0

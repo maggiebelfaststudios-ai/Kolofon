@@ -1,3 +1,7 @@
 .tmp.driveupload/
 nul
 supabase/.temp/
+
+# Video masters kept beside the web versions, never committed
+video_material/_originals/
+photo_material/_originals/
