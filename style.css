@@ -541,7 +541,6 @@ body {
     /* cover fills the screen. The trade-off is that a clip shaped
        differently to the window gets trimmed rather than letterboxed. */
     object-fit: cover;
-    filter: grayscale(100%);
     z-index: 0;
 }
 
