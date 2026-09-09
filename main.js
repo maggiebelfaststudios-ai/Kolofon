@@ -142,38 +142,69 @@ function formatPrice(value) {
 }
 
 function initHomeVideos() {
-    const video = document.querySelector('.text-panel-bg-video');
-    if (!video) return;
+    const videos = Array.from(document.querySelectorAll('.home-panel-video'));
+    if (!videos.length) return;
 
-    video.muted = true;
-    video.playsInline = true;
-    video.loop = true;
+    const wide = window.matchMedia('(min-width: 1024px)');
+    let current = 0;
 
-    // Do NOT hide the video with opacity — Chrome may block autoplay on hidden elements.
-    // Instead, CSS overlays (::before cover + ::after tint) handle the loading state.
-    const reveal = () => {
-        video.closest('.home-text-panel').classList.add('video-playing');
-    };
+    const panelOf = (v) => v.closest('.home-video-panel');
 
-    // HTML autoplay may have already started the video before JS ran
-    if (!video.paused) {
-        reveal();
-        return;
-    }
-
-    video.addEventListener('playing', reveal, { once: true });
-
-    const tryPlay = () => {
-        video.muted = true;
-        video.play().catch(() => {
-            // Autoplay blocked — retry on first user interaction
-            const resume = () => tryPlay();
-            document.addEventListener('touchstart', resume, { once: true });
-            document.addEventListener('click', resume, { once: true });
+    // Desktop shows both at once, so each simply loops on its own.
+    const playBoth = () => {
+        videos.forEach(v => {
+            panelOf(v).classList.add('is-playing');
+            v.loop = true;
+            v.muted = true;
+            v.play().catch(() => {});
         });
     };
 
-    tryPlay();
+    // Mobile has room for one, so they take turns: each hands over to the
+    // next when it ends, and the pair repeats indefinitely.
+    const showOne = (index) => {
+        videos.forEach((v, n) => {
+            const active = n === index;
+            panelOf(v).classList.toggle('is-playing', active);
+            v.loop = false; // looping would never fire "ended", so nothing would hand over
+            v.muted = true;
+            if (active) {
+                v.currentTime = 0;
+                v.play().catch(() => {});
+            } else {
+                v.pause();
+            }
+        });
+    };
+
+    const handOver = () => {
+        current = (current + 1) % videos.length;
+        showOne(current);
+    };
+
+    const apply = () => {
+        videos.forEach(v => v.removeEventListener('ended', handOver));
+        if (wide.matches) {
+            playBoth();
+        } else {
+            videos.forEach(v => v.addEventListener('ended', handOver));
+            current = 0;
+            showOne(0);
+        }
+    };
+
+    apply();
+    wide.addEventListener('change', apply);
+
+    // Autoplay is often refused until the visitor interacts with the page.
+    // Retry once on the first touch or click, but only for anything paused.
+    const retry = () => {
+        videos.forEach(v => {
+            if (v.paused && panelOf(v).classList.contains('is-playing')) v.play().catch(() => {});
+        });
+    };
+    document.addEventListener('touchstart', retry, { once: true });
+    document.addEventListener('click', retry, { once: true });
 }
 
 // --- SUPABASE CONFIGURATION ---
