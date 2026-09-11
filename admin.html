@@ -150,6 +150,12 @@
 
         <!-- ORDERS VIEW -->
         <div id="view-orders" style="display: none;">
+            <!-- Books a shipment Shipmondo neither sends nor invoices, purely to
+                 confirm the credentials, the GLS agreement and the response shape. -->
+            <div style="margin-bottom: 1rem;">
+                <button onclick="testShipmondo(this)" class="btn-primary" style="padding: 0.4rem 0.75rem; font-size: 0.75rem; background: transparent; color: #111; border: 1px solid #ccc;">Test Shipmondo-forbindelsen (gratis)</button>
+                <span style="font-size: 0.75rem; color: #666; margin-left: 0.6rem;">Opretter ingen rigtig pakke og koster ingenting.</span>
+            </div>
             <table>
                 <thead>
                     <tr>
@@ -283,6 +289,55 @@
                 `;
                 orderTableBody.appendChild(row);
             });
+        }
+
+        // A dry run against the newest order. Shipmondo is asked for a real
+        // shipment with test_mode set, so everything is exercised - credentials,
+        // the GLS agreement, the pickup point, the label - without a parcel being
+        // sent or invoiced, and without the order being touched.
+        async function testShipmondo(btn) {
+            if (!orders.length) {
+                alert('Der er ingen ordrer at teste med.');
+                return;
+            }
+            const order = orders[0];
+            const original = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Tester...';
+
+            try {
+                const { data: { session } } = await client.auth.getSession();
+                const res = await fetch(`${supabaseUrl}/functions/v1/create-shipment`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({ order_id: order.order_id, test_mode: true }),
+                });
+                const data = await res.json();
+                console.log('Shipmondo testsvar:', data);
+
+                if (!res.ok) {
+                    alert('Shipmondo afviste testen:\n\n' + JSON.stringify(data, null, 2).slice(0, 1200));
+                    return;
+                }
+
+                alert([
+                    'Forbindelsen virker.',
+                    ``,
+                    `Tracking-nummer: ${data.tracking_number || "(ingen)"}`,
+                    `Feltet det kom fra: ${data.tracking_field || "(intet felt matchede)"}`,
+                    `Label modtaget: ${data.has_label ? "ja" : "nej"}`,
+                    ``,
+                    'Hele svaret ligger i konsollen (F12).',
+                ].join('\n'));
+            } catch (err) {
+                alert('Testen kunne ikke gennemføres: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = original;
+            }
         }
 
         // Marking an order shipped does three things in order: book the parcel

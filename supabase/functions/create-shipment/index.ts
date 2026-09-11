@@ -30,7 +30,11 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { order_id } = await req.json();
+    // test_mode books a shipment that Shipmondo does not send to the carrier
+    // and does not invoice. Nothing is written back to the order either, so a
+    // dry run can never leave a real order looking dispatched.
+    const { order_id, test_mode = false } = await req.json();
+    const isTest = Boolean(test_mode);
     if (!order_id) {
       return new Response(JSON.stringify({ error: 'order_id mangler' }), { status: 400, headers: corsHeaders });
     }
@@ -57,8 +61,9 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: 'Ordren blev ikke fundet' }), { status: 404, headers: corsHeaders });
     }
 
-    // Don't book a second parcel for an order that already has one
-    if (order.tracking_number) {
+    // Don't book a second parcel for an order that already has one. A dry run
+    // books nothing, so it is free to repeat.
+    if (order.tracking_number && !isTest) {
       return new Response(JSON.stringify({
         error: 'Der findes allerede en forsendelse for denne ordre',
         tracking_number: order.tracking_number,
@@ -77,7 +82,7 @@ Deno.serve(async (req: Request) => {
     // so nothing is retyped between here and the label.
     const shipmentBody = {
       own_agreement: false,
-      test_mode: false,
+      test_mode: isTest,
       product_code: PRODUCT_CODE,
       pickup_point_id: String(servicePoint.id),
       reference: order_id,
@@ -115,16 +120,42 @@ Deno.serve(async (req: Request) => {
     }
 
     // The exact field names are not documented in the public pages, so log the
-    // whole response once and read the number from whichever field carries it.
+    // whole response and record which candidate actually held the number. Once
+    // a booking has confirmed that, the guesswork here can become a single read.
     console.log('Shipmondo shipment response:', JSON.stringify(data));
 
     const parcel = Array.isArray(data.parcels) ? data.parcels[0] : null;
-    const trackingNumber =
-      data.package_number || data.tracking_number || data.barcode ||
-      parcel?.package_number || parcel?.tracking_number || parcel?.barcode || null;
+    const candidates: [string, unknown][] = [
+      ['package_number', data.package_number],
+      ['tracking_number', data.tracking_number],
+      ['barcode', data.barcode],
+      ['parcels[0].package_number', parcel?.package_number],
+      ['parcels[0].tracking_number', parcel?.tracking_number],
+      ['parcels[0].barcode', parcel?.barcode],
+    ];
+    const hit = candidates.find(([, value]) => Boolean(value));
+    const trackingNumber = hit ? String(hit[1]) : null;
+    const trackingField = hit ? hit[0] : null;
 
-    if (!trackingNumber) {
+    if (trackingNumber) {
+      console.log(`Tracking number came from the field: ${trackingField}`);
+    } else {
       console.error('Shipment created but no tracking number found in the response');
+      console.error('Top-level keys were:', Object.keys(data).join(', '));
+    }
+
+    if (isTest) {
+      // The label is a whole PDF, so report that it arrived rather than echo it
+      const { label_base64, ...rest } = data;
+      return new Response(JSON.stringify({
+        success: true,
+        test_mode: true,
+        tracking_number: trackingNumber,
+        tracking_field: trackingField,
+        has_label: Boolean(label_base64),
+        label_bytes: label_base64 ? label_base64.length : 0,
+        response: rest,
+      }), { status: 200, headers: corsHeaders });
     }
 
     const { error: updateError } = await supabase
@@ -150,6 +181,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({
       success: true,
       tracking_number: trackingNumber,
+      tracking_field: trackingField,
       has_label: Boolean(data.label_base64),
     }), { status: 200, headers: corsHeaders });
 
