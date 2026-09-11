@@ -51,9 +51,9 @@ const ok = (name, cond, extra = '') => {
     else { fail++; console.log('  FAIL  ' + name + (extra ? '  -> ' + extra : '')); }
 };
 
-function load({ duration = 1, fps = 30, presentFrames = true, slowEncoder = false, clockSpeed = 1 } = {}) {
+function load({ duration = 1, fps = 30, presentFrames = true, slowEncoder = false, clockSpeed = 1, unsupported = [] } = {}) {
     const video = { plays: 0, playAfterEnded: 0 };
-    const enc = { encodes: 0, encodeAfterClose: 0 };
+    const enc = { encodes: 0, encodeAfterClose: 0, codec: null, asked: [] };
     const warnings = [];
 
     // Visibility the test can flip mid-capture, with listeners that really fire
@@ -96,32 +96,65 @@ function load({ duration = 1, fps = 30, presentFrames = true, slowEncoder = fals
     }
 
     class FakeEncoder {
-        static async isConfigSupported(config) { return { supported: true, config }; }
-        constructor({ output }) { this.output = output; this.encodeQueueSize = 0; this.closed = false; this.first = true; }
-        configure() {}
+        static async isConfigSupported(config) {
+            enc.asked.push(config.codec);
+            return { supported: !unsupported.includes(config.codec), config };
+        }
+        constructor({ output }) {
+            this.output = output; this.encodeQueueSize = 0; this.closed = false;
+            this.first = true; this.held = null; this.codec = null;
+        }
+        configure(config) { this.codec = config.codec; enc.codec = config.codec; }
+
+        // Main and High profiles allow B-frames, and a hardware encoder using them
+        // hands frames back in decoding order - 0, 2, 1, 4, 3 - which is what broke
+        // the real upload. Baseline (profile 42) can't, so it keeps display order.
+        get usesBFrames() { return !/^avc1\.42/.test(this.codec || ''); }
+
         encode(frame, opts) {
             if (this.closed) { enc.encodeAfterClose++; throw new Error('encoder is closed'); }
             enc.encodes++;
             this.encodeQueueSize++;
+            // As a real encoder does, the chunk takes its timestamp and duration
+            // from the frame - so a frame with no duration gives a chunk with none.
+            const key = Boolean(opts && opts.keyFrame);
+            const chunk = new EncodedVideoChunk({
+                type: key ? 'key' : 'delta',
+                timestamp: frame.timestamp,
+                duration: frame.duration,
+                data: new Uint8Array(100),
+            });
+
+            if (this.usesBFrames && !key) {
+                // Hold this one as a B-frame until the frame after it arrives, then
+                // release them the other way round.
+                if (!this.held) { this.held = chunk; return; }
+                const b = this.held;
+                this.held = null;
+                this.emit(chunk);
+                this.emit(b);
+                return;
+            }
+            if (this.held) { this.emit(this.held); this.held = null; }
+            this.emit(chunk);
+        }
+
+        emit(chunk) {
             setTimeout(() => {
                 this.encodeQueueSize--;
                 if (this.closed) return;
-                // As a real encoder does, the chunk takes its timestamp and duration
-                // from the frame - so a frame with no duration gives a chunk with none.
-                const chunk = new EncodedVideoChunk({
-                    type: opts && opts.keyFrame ? 'key' : 'delta',
-                    timestamp: frame.timestamp,
-                    duration: frame.duration,
-                    data: new Uint8Array(100),
-                });
                 const meta = this.first
-                    ? { decoderConfig: { codec: 'avc1.640028', codedWidth: 1080, codedHeight: 1920, description: new Uint8Array([1, 100, 0, 40, 255, 225]).buffer } }
+                    ? { decoderConfig: { codec: this.codec, codedWidth: 1080, codedHeight: 1920, description: new Uint8Array([1, 66, 0, 40, 255, 225]).buffer } }
                     : undefined;
                 this.first = false;
                 this.output(chunk, meta);
             }, slowEncoder ? 40 : 1);
         }
-        async flush() { while (this.encodeQueueSize > 0) await new Promise(r => setTimeout(r, 5)); }
+
+        async flush() {
+            if (this.held) { this.emit(this.held); this.held = null; }
+            while (this.encodeQueueSize > 0) await new Promise(r => setTimeout(r, 5));
+        }
         close() { this.closed = true; }
     }
 
@@ -206,6 +239,32 @@ console.log('\ncapture - tab hidden for a long time, then brought back');
     const r = await within(run, 8000);
     ok('does not give up while the tab is away', !t.warnings.some(w => /ingen nye billeder/.test(w)), t.warnings.join(' | '));
     ok('finishes once the tab is back', r !== 'TIMEOUT' && r.note !== null, r === 'TIMEOUT' ? 'timed out' : 'fell back: ' + t.warnings.join(' | '));
+}
+
+console.log('\ncapture - encoder that reorders frames');
+{
+    // The fake reorders for any profile that allows B-frames, as the real
+    // hardware encoder did. The codec chosen must be one that cannot.
+    const t = load();
+    const r = await within(t.M.prepare(clip()), 5000);
+    ok('chooses a Baseline codec', /^avc1\.42/.test(t.enc.codec || ''), 'used ' + t.enc.codec);
+    ok('produces an optimised file', r !== 'TIMEOUT' && r.note !== null, r === 'TIMEOUT' ? 'timed out' : t.warnings.join(' | '));
+}
+
+console.log('\ncapture - first Baseline level refused');
+{
+    const t = load({ unsupported: ['avc1.42E028'] });
+    const r = await within(t.M.prepare(clip()), 5000);
+    ok('moves on to the next level', t.enc.codec === 'avc1.42E02A', 'used ' + t.enc.codec + ', asked ' + t.enc.asked.join(', '));
+    ok('still produces an optimised file', r !== 'TIMEOUT' && r.note !== null, r === 'TIMEOUT' ? 'timed out' : t.warnings.join(' | '));
+}
+
+console.log('\ncapture - no Baseline level available at all');
+{
+    const t = load({ unsupported: ['avc1.42E028', 'avc1.42E02A', 'avc1.42E032', 'avc1.42E033'] });
+    const r = await within(t.M.prepare(clip()), 5000);
+    ok('hands back the original', r !== 'TIMEOUT' && r.note === null);
+    ok('says why', t.warnings.some(w => /Baseline/.test(w)), t.warnings.join(' | ') || 'no warning');
 }
 
 console.log(`\n  ${pass} passed, ${fail} failed\n`);

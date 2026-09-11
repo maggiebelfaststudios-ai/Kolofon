@@ -22,7 +22,18 @@
     // Matches what tools/optimise-video.mjs settles on for this footage.
     const MAX_VIDEO_LONG = 1920;
     const MAX_VIDEO_SHORT = 1080;
-    const VIDEO_BITRATE = 2_500_000;
+    // Higher than a High profile encode would need: Baseline (see below) has no
+    // CABAC or 8x8 transform, and fine repeating detail - the grids in these
+    // pieces - is where that shows first. Still around a sixth of a phone clip.
+    const VIDEO_BITRATE = 3_500_000;
+
+    // Constrained Baseline, tried from the lowest level that fits 1080x1920 up.
+    // Baseline cannot contain B-frames. High profile can, and a hardware encoder
+    // using them returns frames in decoding order rather than display order -
+    // 0, 2, 1 - which the muxer rejects because timestamps must keep rising.
+    // That is what failed on a real upload. Baseline is also the one H.264
+    // variant every device can play.
+    const CODECS = ['avc1.42E028', 'avc1.42E02A', 'avc1.42E032', 'avc1.42E033'];
     const KEYFRAME_SECONDS = 2;
     const FRAMERATE = 30;
     const FRAME_DURATION_US = Math.round(1e6 / FRAMERATE);
@@ -113,7 +124,9 @@
 
     async function optimiseVideo(file, onProgress) {
         const started = performance.now();
-        const stats = { frames: 0, expectedFrames: null, tabWasHidden: false, stopReason: null };
+        // clipSecondsReached against frames shows whether frames were dropped or the
+        // capture simply ran slowly - a gap between the two means dropped frames.
+        const stats = { frames: 0, expectedFrames: null, clipSecondsReached: 0, tabWasHidden: false, stopReason: null, codec: null };
 
         // Every way out of here used to be a bare return null, so a failed run
         // gave no hint of which check tripped. Each one now says so in the console.
@@ -181,21 +194,20 @@
             error: e => { encoderError = e; },
         });
 
-        const config = {
-            codec: 'avc1.640028',       // High profile, level 4.0
-            width,
-            height,
-            bitrate: VIDEO_BITRATE,
-            framerate: FRAMERATE,
-        };
-
+        // Not every build ships an H.264 encoder, or supports every level, so
+        // ask about each in turn rather than assume.
+        let config = null;
         try {
-            // Not every build ships an H.264 encoder, so ask rather than assume
-            const support = await window.VideoEncoder.isConfigSupported(config);
-            if (!support || !support.supported) {
-                cleanUp();
-                return fail('browseren har ingen H.264-encoder til denne opløsning');
+            for (const codec of CODECS) {
+                const candidate = { codec, width, height, bitrate: VIDEO_BITRATE, framerate: FRAMERATE };
+                const support = await window.VideoEncoder.isConfigSupported(candidate);
+                if (support && support.supported) { config = candidate; break; }
             }
+            if (!config) {
+                cleanUp();
+                return fail('browseren har ingen Baseline H.264-encoder til denne opløsning');
+            }
+            stats.codec = config.codec;
             encoder.configure(config);
         } catch (e) {
             cleanUp();
@@ -287,6 +299,7 @@
                 frame.close();
                 count++;
 
+                stats.clipSecondsReached = Number(meta.mediaTime.toFixed(2));
                 if (onProgress) onProgress(Math.min(0.99, meta.mediaTime / duration));
 
                 // Keep the encoder from falling behind playback. Only one drain
