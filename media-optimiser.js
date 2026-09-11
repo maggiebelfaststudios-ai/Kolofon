@@ -26,6 +26,11 @@
     const KEYFRAME_SECONDS = 2;
     const FRAMERATE = 30;
 
+    // How long a visible tab may go without a single new frame before the
+    // capture is abandoned. Slow is fine - this only catches a frozen one, and
+    // time spent in a background tab is not counted at all.
+    const STALL_SECONDS = 60;
+
     const mb = b => (b / 1048576).toFixed(1) + ' MB';
 
     /** Swaps a filename's extension, keeping the rest of the name. */
@@ -191,9 +196,25 @@
             return fail('encoderen kunne ikke konfigureres: ' + e.message);
         }
 
-        // A hidden tab stops presenting frames, so the capture silently stalls.
-        // Noted rather than prevented - it explains a slow or failed run.
-        const onVisibility = () => { if (document.hidden) stats.tabWasHidden = true; };
+        // Shared between the capture and the visibility listener below.
+        const clock = { lastFrameAt: performance.now(), hiddenSince: null };
+
+        // A hidden tab stops presenting frames, so the capture waits. That wait
+        // is not held against it: whatever time passes in the background is
+        // added back when the tab returns, so switching away and coming back
+        // later never trips the stall check. This relies on the event rather
+        // than on polling, because browsers throttle timers in background tabs
+        // and a poll would miss how long the tab was actually away.
+        const onVisibility = () => {
+            if (document.hidden) {
+                stats.tabWasHidden = true;
+                clock.hiddenSince = performance.now();
+            } else if (clock.hiddenSince !== null) {
+                clock.lastFrameAt += performance.now() - clock.hiddenSince;
+                clock.hiddenSince = null;
+            }
+        };
+        if (document.hidden) clock.hiddenSince = performance.now();
         document.addEventListener('visibilitychange', onVisibility);
 
         // Frames are pulled as they are presented, so the encode runs at
@@ -203,7 +224,6 @@
             let lastTimestamp = -1;
             let done = false;
             let draining = false;
-            let lastFrameAt = performance.now();
 
             // One way to stop. Before this the loop carried on after the clip
             // ended, feeding stray frames to an encoder that was being flushed.
@@ -216,18 +236,21 @@
                 resolve(count);
             };
 
-            // Give up rather than hang. A stalled capture used to sit there for
-            // minutes before failing anyway.
+            // Give up only on a capture that is genuinely frozen: the tab is in
+            // front, the encoder is not busy, and still no frame has come for a
+            // full minute. A slow capture keeps resetting this, and a hidden one
+            // is skipped entirely, so waiting it out is always allowed.
             const watchdog = setInterval(() => {
-                if (!draining && performance.now() - lastFrameAt > 15000) {
-                    finish('ingen nye billeder i 15 sekunder');
+                if (document.hidden || draining) return;
+                if (performance.now() - clock.lastFrameAt > STALL_SECONDS * 1000) {
+                    finish(`ingen nye billeder i ${STALL_SECONDS} sekunder med fanen åben`);
                 }
             }, 1000);
 
             const onFrame = (now, meta) => {
                 if (done) return;
                 if (encoderError) return finish('encoderfejl: ' + encoderError.message);
-                lastFrameAt = performance.now();
+                clock.lastFrameAt = performance.now();
 
                 // Microseconds, and strictly increasing or the encoder rejects it
                 let timestamp = Math.round(meta.mediaTime * 1e6);
@@ -264,7 +287,7 @@
                         if (encoder.encodeQueueSize <= 4) {
                             clearInterval(drain);
                             draining = false;
-                            lastFrameAt = performance.now();
+                            clock.lastFrameAt = performance.now();
                             source.play().catch(() => {});
                         }
                     }, 50);
@@ -354,9 +377,10 @@
                 return out || { file, note: null };
             }
             if (/^video\//.test(file.type)) {
-                // Frames are captured as the clip plays, which stops if the tab is
-                // hidden - so the one instruction worth giving is to stay on it.
-                const stage = 'Optimerer video - bliv på denne fane';
+                // Frames are captured as the clip plays. Switching tabs is allowed -
+                // the capture waits - but staying is the dependable way, so it is
+                // suggested rather than required.
+                const stage = 'Optimerer video, bliv gerne på fanen';
                 if (onProgress) onProgress(stage, 0);
                 const out = await optimiseVideo(file, r => onProgress && onProgress(stage, r));
                 return out || { file, note: null };

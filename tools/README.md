@@ -73,8 +73,10 @@ a portrait photo cannot arrive on its side.
 
 **Videos** are re-encoded with WebCodecs to H.264 at 2.5 Mbps, capped at
 1920x1080, with the index moved to the front — the same treatment the desktop
-tool gives. Frames are taken as they play, so a 15-second clip takes about
-15 seconds.
+tool gives. Frames are taken as the clip plays, so it can never run faster than
+the clip itself, and in practice runs a good deal slower — the first real upload
+of a 7.7 second clip took several minutes. That is fine; it is allowed to take
+as long as it needs.
 
 ## It always falls back
 
@@ -95,10 +97,20 @@ is loaded back and its duration checked before it is trusted.
 
 Run `node tools/test-media-optimiser.mjs` to exercise those paths, and
 `node tools/test-video-capture.mjs` to simulate the capture loop itself - a
-stalled capture, an encoder that falls behind, and a clip that ends.
+frozen capture, an encoder that falls behind, a clip that ends, and a tab that
+is hidden for a long time and then brought back.
 
-Keep the tab in front while a video optimises. Frames are captured as the clip
-plays, and a hidden tab stops presenting them; the capture now gives up after
-15 seconds without a frame rather than hanging.
+## Waiting, and switching tabs
+
+A slow capture is never cut off. The only thing that ends one early is a
+genuine freeze: the tab in front, the encoder idle, and still no new frame for
+a full 60 seconds.
+
+Switching to another tab is allowed. A hidden tab stops presenting frames, so
+the capture simply waits, and the time spent away is not counted against it —
+it carries on when the tab comes back. Whether the browser pauses the clip or
+lets it run on while hidden is up to the browser, though, and if it runs on,
+the frames it played unseen are lost and the result is rejected as too short.
+Staying on the tab is still the dependable way.
 
 The admin page logs what happened to each file in the browser console.

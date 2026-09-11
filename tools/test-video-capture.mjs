@@ -25,6 +25,13 @@ function load({ duration = 1, fps = 30, presentFrames = true, slowEncoder = fals
     const enc = { encodes: 0, encodeAfterClose: 0 };
     const warnings = [];
 
+    // Visibility the test can flip mid-capture, with listeners that really fire
+    const doc = {
+        hidden: false,
+        listeners: [],
+        setHidden(h) { this.hidden = h; this.listeners.forEach(fn => fn()); },
+    };
+
     class FakeVideo {
         constructor() {
             this.videoWidth = 1080; this.videoHeight = 1920; this.duration = duration;
@@ -41,7 +48,7 @@ function load({ duration = 1, fps = 30, presentFrames = true, slowEncoder = fals
             if (!presentFrames) return Promise.resolve();
             clearInterval(this._timer);
             this._timer = setInterval(() => {
-                if (this.paused) return;
+                if (this.paused || doc.hidden) return; // a background tab suspends playback
                 this.currentTime += 1 / fps;
                 if (this.currentTime >= this.duration) {
                     clearInterval(this._timer);
@@ -95,21 +102,22 @@ function load({ duration = 1, fps = 30, presentFrames = true, slowEncoder = fals
     const sandbox = {
         window: win,
         document: {
-            hidden: false,
+            get hidden() { return doc.hidden; },
             createElement: t => (t === 'video' ? new FakeVideo() : {}),
-            addEventListener() {}, removeEventListener() {},
+            addEventListener: (type, fn) => { if (type === 'visibilitychange') doc.listeners.push(fn); },
+            removeEventListener: (type, fn) => { doc.listeners = doc.listeners.filter(x => x !== fn); },
         },
         HTMLVideoElement: { prototype: { requestVideoFrameCallback() {} } },
         createImageBitmap: undefined,
         File, Blob,
         URL: { createObjectURL: () => 'blob:fake', revokeObjectURL() {} },
-        // A faster clock lets the 15 second watchdog be tested in about one second
+        // A faster clock lets the 60 second watchdog be tested in about one second
         performance: { now: () => origin + (performance.now() - origin) * clockSpeed },
         console: { log() {}, warn: (...a) => warnings.push(a.map(String).join(' ')) },
     };
     const keys = Object.keys(sandbox);
     new Function(...keys, src)(...keys.map(k => sandbox[k]));
-    return { M: win.MediaOptimiser, video, enc, warnings };
+    return { M: win.MediaOptimiser, video, enc, warnings, doc };
 }
 
 const clip = () => new File([new Uint8Array(10_000_000)], 'clip.mp4', { type: 'video/mp4' });
@@ -141,13 +149,29 @@ console.log('\ncapture - encoder falls behind');
     ok('nothing is encoded after the encoder closes', t.enc.encodeAfterClose === 0, `${t.enc.encodeAfterClose} stray encodes`);
 }
 
-console.log('\ncapture - stalls (as in a hidden tab)');
+console.log('\ncapture - frozen with the tab in front');
 {
-    const t = load({ presentFrames: false, clockSpeed: 40 });
+    // 60 simulated seconds pass in well under two real ones
+    const t = load({ presentFrames: false, clockSpeed: 100 });
     const r = await within(t.M.prepare(clip()), 6000);
     ok('gives up instead of hanging', r !== 'TIMEOUT');
     ok('hands back the original', r !== 'TIMEOUT' && r.note === null);
     ok('says why in the console', t.warnings.some(w => /ingen nye billeder/.test(w)), t.warnings.join(' | ') || 'no warning');
+}
+
+console.log('\ncapture - tab hidden for a long time, then brought back');
+{
+    // Hidden for 3 real seconds at 100x is 5 simulated minutes - far past the
+    // 60 second stall limit, which is exactly what must not count against it.
+    const t = load({ clockSpeed: 100 });
+    const run = t.M.prepare(clip());
+    await new Promise(r => setTimeout(r, 20));
+    t.doc.setHidden(true);
+    await new Promise(r => setTimeout(r, 3000));
+    t.doc.setHidden(false);
+    const r = await within(run, 8000);
+    ok('does not give up while the tab is away', !t.warnings.some(w => /ingen nye billeder/.test(w)), t.warnings.join(' | '));
+    ok('finishes once the tab is back', r !== 'TIMEOUT' && r.note !== null, r === 'TIMEOUT' ? 'timed out' : 'fell back: ' + t.warnings.join(' | '));
 }
 
 console.log(`\n  ${pass} passed, ${fail} failed\n`);
