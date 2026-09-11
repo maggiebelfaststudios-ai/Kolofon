@@ -100,6 +100,11 @@ Run `node tools/test-media-optimiser.mjs` to exercise those paths, and
 frozen capture, an encoder that falls behind, a clip that ends, and a tab that
 is hidden for a long time and then brought back.
 
+The capture test runs against the **real** mp4-muxer, fetched from the URL
+admin.html pins, so it needs a network connection. A fake muxer was tried first
+and accepted chunks the real one rejects - which let the bug that broke the first
+live upload through.
+
 ## Waiting, and switching tabs
 
 A slow capture is never cut off. The only thing that ends one early is a

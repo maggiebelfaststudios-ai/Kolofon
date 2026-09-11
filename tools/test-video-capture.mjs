@@ -7,12 +7,43 @@
  * matter - frames arrive while playing, an encoder can fall behind, and play()
  * on a clip that has ended starts it again from the top.
  *
+ * The muxer is the real one, fetched from the same URL the admin page loads.
+ * An earlier fake accepted any chunk it was given, and so passed a version
+ * whose every chunk the real muxer rejected - which is exactly how the first
+ * live upload failed. Needs a network connection for that reason.
+ *
  * Usage: node tools/test-video-capture.mjs [path-to-media-optimiser.js]
  */
 import { readFileSync } from 'node:fs';
 
 const path = process.argv[2] || 'media-optimiser.js';
 const src = readFileSync(path, 'utf8');
+
+const muxerUrl = (readFileSync('admin.html', 'utf8').match(/https:\/\/cdn\.jsdelivr\.net\/npm\/mp4-muxer@[^"]+/) || [])[0];
+if (!muxerUrl) { console.error('Could not find the mp4-muxer URL in admin.html'); process.exit(2); }
+let muxerSource;
+try {
+    muxerSource = await (await fetch(muxerUrl)).text();
+} catch (e) {
+    console.error('Could not fetch the real muxer (' + muxerUrl + '): ' + e.message);
+    process.exit(2);
+}
+// The muxer checks instanceof EncodedVideoChunk, a browser class Node does not
+// have. This stands in for it with the fields a real chunk exposes - including
+// a duration that is null when the frame it came from had none.
+class EncodedVideoChunk {
+    constructor({ type, timestamp, duration = null, data }) {
+        this.type = type;
+        this.timestamp = timestamp;
+        this.duration = duration;
+        this.byteLength = data.byteLength;
+        this._data = data;
+    }
+    copyTo(dest) { dest.set(this._data); }
+}
+class EncodedAudioChunk {}
+
+const RealMp4Muxer = new Function('EncodedVideoChunk', 'EncodedAudioChunk', muxerSource + '\n;return Mp4Muxer;')(EncodedVideoChunk, EncodedAudioChunk);
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = '') => {
@@ -75,27 +106,30 @@ function load({ duration = 1, fps = 30, presentFrames = true, slowEncoder = fals
             setTimeout(() => {
                 this.encodeQueueSize--;
                 if (this.closed) return;
-                const meta = this.first ? { decoderConfig: {} } : undefined;
+                // As a real encoder does, the chunk takes its timestamp and duration
+                // from the frame - so a frame with no duration gives a chunk with none.
+                const chunk = new EncodedVideoChunk({
+                    type: opts && opts.keyFrame ? 'key' : 'delta',
+                    timestamp: frame.timestamp,
+                    duration: frame.duration,
+                    data: new Uint8Array(100),
+                });
+                const meta = this.first
+                    ? { decoderConfig: { codec: 'avc1.640028', codedWidth: 1080, codedHeight: 1920, description: new Uint8Array([1, 100, 0, 40, 255, 225]).buffer } }
+                    : undefined;
                 this.first = false;
-                this.output({ type: opts && opts.keyFrame ? 'key' : 'delta' }, meta);
+                this.output(chunk, meta);
             }, slowEncoder ? 40 : 1);
         }
         async flush() { while (this.encodeQueueSize > 0) await new Promise(r => setTimeout(r, 5)); }
         close() { this.closed = true; }
     }
 
-    const Mp4Muxer = {
-        ArrayBufferTarget: class { constructor() { this.buffer = null; } },
-        Muxer: class {
-            constructor({ target }) { this.target = target; this.chunks = 0; }
-            addVideoChunk() { this.chunks++; }
-            finalize() { this.target.buffer = new ArrayBuffer(50 * this.chunks); }
-        },
-    };
+    const Mp4Muxer = RealMp4Muxer;
 
     const win = {
         VideoEncoder: FakeEncoder,
-        VideoFrame: class { close() {} },
+        VideoFrame: class { constructor(source, init = {}) { this.timestamp = init.timestamp; this.duration = init.duration ?? null; } close() {} },
         Mp4Muxer,
     };
     const origin = performance.now();

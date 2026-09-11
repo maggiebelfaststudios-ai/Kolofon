@@ -25,6 +25,7 @@
     const VIDEO_BITRATE = 2_500_000;
     const KEYFRAME_SECONDS = 2;
     const FRAMERATE = 30;
+    const FRAME_DURATION_US = Math.round(1e6 / FRAMERATE);
 
     // How long a visible tab may go without a single new frame before the
     // capture is abandoned. Slow is fine - this only catches a frozen one, and
@@ -154,7 +155,12 @@
 
         const muxer = new window.Mp4Muxer.Muxer({
             target: new window.Mp4Muxer.ArrayBufferTarget(),
-            video: { codec: 'avc', width, height, frameRate: FRAMERATE },
+            // No frameRate here. Passing one makes it the timescale and snaps every
+            // timestamp to that grid, which the muxer only supports for frames that
+            // land exactly on it. These are taken as the browser presents them -
+            // with jitter, and from sources that are often 29.97 fps rather than 30 -
+            // so they keep the muxer's default fine-grained timescale instead.
+            video: { codec: 'avc', width, height },
             // The same faststart the desktop tool applies: the index goes at the
             // front so playback can begin before the download finishes.
             fastStart: 'in-memory',
@@ -259,7 +265,14 @@
 
                 let frame;
                 try {
-                    frame = new window.VideoFrame(source, { timestamp });
+                    // The duration is not optional in practice. An encoded chunk
+                    // inherits it from its frame, and the muxer rejects any chunk
+                    // whose duration isn't a number - so without it every chunk was
+                    // refused, the muxer ended up empty, and the upload fell back to
+                    // the original. Only the last frame's length actually comes from
+                    // this; the muxer replaces the rest with the real gap between
+                    // timestamps as each following frame arrives.
+                    frame = new window.VideoFrame(source, { timestamp, duration: FRAME_DURATION_US });
                 } catch (e) {
                     return finish('billede kunne ikke læses: ' + e.message);
                 }
