@@ -38,10 +38,14 @@
     const FRAMERATE = 30;
     const FRAME_DURATION_US = Math.round(1e6 / FRAMERATE);
 
-    // How long a visible tab may go without a single new frame before the
-    // capture is abandoned. Slow is fine - this only catches a frozen one, and
-    // time spent in a background tab is not counted at all.
+    // How long a visible tab may go without any progress before the capture is
+    // abandoned. Slow is fine - this only catches a frozen one, and time spent
+    // in a background tab is not counted at all.
     const STALL_SECONDS = 60;
+
+    // Frames handed to the encoder but not yet taken up. Each is a whole decoded
+    // picture - several megabytes at 1080x1920 - so the backlog is kept short.
+    const MAX_ENCODE_QUEUE = 8;
 
     const mb = b => (b / 1048576).toFixed(1) + ' MB';
 
@@ -102,11 +106,12 @@
 
     // ---------------------------------------------------------------- videos
 
+    // requestVideoFrameCallback is no longer needed: frames are reached by
+    // seeking rather than caught while playing (see optimiseVideo).
     function videoSupported() {
         return typeof window.VideoEncoder === 'function'
             && typeof window.VideoFrame === 'function'
-            && typeof window.Mp4Muxer === 'object'
-            && 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
+            && typeof window.Mp4Muxer === 'object';
     }
 
     /** Loads a file into a detached <video> and waits for its metadata. */
@@ -128,8 +133,7 @@
         // capture simply ran slowly - a gap between the two means dropped frames.
         const stats = { frames: 0, expectedFrames: null, clipSecondsReached: 0, tabWasHidden: false, stopReason: null, codec: null };
 
-        // Every way out of here used to be a bare return null, so a failed run
-        // gave no hint of which check tripped. Each one now says so in the console.
+        // Every way out of here says which check tripped, in the console.
         const fail = reason => {
             console.warn('Video-optimering sprang over: ' + reason, {
                 seconds: ((performance.now() - started) / 1000).toFixed(1),
@@ -156,7 +160,9 @@
             cleanUp();
             return fail('videoen har ingen brugbare dimensioner eller varighed');
         }
-        stats.expectedFrames = Math.round(duration * FRAMERATE);
+
+        const total = Math.max(1, Math.floor(duration * FRAMERATE));
+        stats.expectedFrames = total;
 
         // Cap the long edge at 1920 and the short at 1080, keeping the shape.
         const longEdge = Math.max(sw, sh);
@@ -166,25 +172,27 @@
         const width = Math.round(sw * scale / 2) * 2;
         const height = Math.round(sh * scale / 2) * 2;
 
+        // When anything last moved forward - a frame handed over, or one coming back
+        // from the encoder. Shared with the encoder callback and the visibility
+        // listener, so it is set up before either.
+        const clock = { lastProgressAt: performance.now(), hiddenSince: null };
+
         const muxer = new window.Mp4Muxer.Muxer({
             target: new window.Mp4Muxer.ArrayBufferTarget(),
             // No frameRate here. Passing one makes it the timescale and snaps every
             // timestamp to that grid, which the muxer only supports for frames that
-            // land exactly on it. These are taken as the browser presents them -
-            // with jitter, and from sources that are often 29.97 fps rather than 30 -
-            // so they keep the muxer's default fine-grained timescale instead.
+            // land exactly on it; sources are often 29.97 fps rather than 30.
             video: { codec: 'avc', width, height },
             // The same faststart the desktop tool applies: the index goes at the
             // front so playback can begin before the download finishes.
             fastStart: 'in-memory',
-            // Frames piped straight from a playing element do not necessarily
-            // start at zero, and the muxer's strict mode rejects that.
             firstTimestampBehavior: 'offset',
         });
 
         let encoderError = null;
         const encoder = new window.VideoEncoder({
             output: (chunk, meta) => {
+                clock.lastProgressAt = performance.now();
                 try {
                     muxer.addVideoChunk(chunk, meta);
                 } catch (e) {
@@ -214,120 +222,126 @@
             return fail('encoderen kunne ikke konfigureres: ' + e.message);
         }
 
-        // Shared between the capture and the visibility listener below.
-        const clock = { lastFrameAt: performance.now(), hiddenSince: null };
-
-        // A hidden tab stops presenting frames, so the capture waits. That wait
-        // is not held against it: whatever time passes in the background is
-        // added back when the tab returns, so switching away and coming back
-        // later never trips the stall check. This relies on the event rather
-        // than on polling, because browsers throttle timers in background tabs
-        // and a poll would miss how long the tab was actually away.
+        // Time spent in a background tab is not held against the capture: whatever
+        // passes there is added back when the tab returns. The event is used rather
+        // than polling because browsers throttle timers in background tabs, and a
+        // poll would miss how long the tab was actually away.
         const onVisibility = () => {
             if (document.hidden) {
                 stats.tabWasHidden = true;
                 clock.hiddenSince = performance.now();
             } else if (clock.hiddenSince !== null) {
-                clock.lastFrameAt += performance.now() - clock.hiddenSince;
+                clock.lastProgressAt += performance.now() - clock.hiddenSince;
                 clock.hiddenSince = null;
             }
         };
         if (document.hidden) clock.hiddenSince = performance.now();
         document.addEventListener('visibilitychange', onVisibility);
 
-        // Frames are pulled as they are presented, so the encode runs at
-        // playback speed. A short product clip is a few seconds of waiting.
-        stats.frames = await new Promise(resolve => {
-            let count = 0;
-            let lastTimestamp = -1;
-            let done = false;
-            let draining = false;
+        // Step through the clip by seeking to each frame, rather than playing it and
+        // catching frames as the browser paints them. Playing lost 54 of 232 frames
+        // on a real upload: under the load of encoding the browser skips painting
+        // some frames, and a frame never painted is never reported. A seek lands on
+        // whatever timestamp is asked for, so none can be missed, and nothing has to
+        // be paused while the encoder catches up.
+        let stalled = null;
+        let cancelSeek = null;
 
-            // One way to stop. Before this the loop carried on after the clip
-            // ended, feeding stray frames to an encoder that was being flushed.
-            const finish = why => {
-                if (done) return;
-                done = true;
-                stats.stopReason = why;
-                clearInterval(watchdog);
-                source.pause();
-                resolve(count);
+        const watchdog = setInterval(() => {
+            if (document.hidden) return;
+            if (performance.now() - clock.lastProgressAt > STALL_SECONDS * 1000) {
+                stalled = `ingen fremgang i ${STALL_SECONDS} sekunder med fanen åben`;
+                if (cancelSeek) cancelSeek(new Error(stalled));
+            }
+        }, 1000);
+
+        const seekTo = time => new Promise((resolve, reject) => {
+            const finish = err => {
+                source.removeEventListener('seeked', onSeeked);
+                source.removeEventListener('error', onError);
+                cancelSeek = null;
+                if (err) reject(err); else resolve();
             };
+            const onSeeked = () => finish();
+            const onError = () => finish(new Error('videoen kunne ikke spoles'));
+            source.addEventListener('seeked', onSeeked);
+            source.addEventListener('error', onError);
+            cancelSeek = finish;
+            source.currentTime = time;
+        });
 
-            // Give up only on a capture that is genuinely frozen: the tab is in
-            // front, the encoder is not busy, and still no frame has come for a
-            // full minute. A slow capture keeps resetting this, and a hidden one
-            // is skipped entirely, so waiting it out is always allowed.
-            const watchdog = setInterval(() => {
-                if (document.hidden || draining) return;
-                if (performance.now() - clock.lastFrameAt > STALL_SECONDS * 1000) {
-                    finish(`ingen nye billeder i ${STALL_SECONDS} sekunder med fanen åben`);
+        const keyInterval = Math.round(FRAMERATE * KEYFRAME_SECONDS);
+        let count = 0;
+
+        try {
+            for (let i = 0; i < total; i++) {
+                if (encoderError) { stats.stopReason = 'encoderfejl: ' + encoderError.message; break; }
+                if (stalled) { stats.stopReason = stalled; break; }
+
+                // Frames are only taken while the tab is visible. A hidden page may
+                // not refresh the picture a seek lands on, and capturing then could
+                // record the same image over and over with nothing to flag it. So
+                // leaving the tab simply pauses the job until it comes back.
+                while (document.hidden && !stalled && !encoderError) {
+                    await new Promise(r => setTimeout(r, 250));
                 }
-            }, 1000);
 
-            const onFrame = (now, meta) => {
-                if (done) return;
-                if (encoderError) return finish('encoderfejl: ' + encoderError.message);
-                clock.lastFrameAt = performance.now();
+                try {
+                    // Half a frame in, so a seek never lands on the boundary between
+                    // two pictures and picks up the neighbouring one.
+                    await seekTo((i + 0.5) / FRAMERATE);
+                    // A seek can report done a moment before its picture is decoded
+                    for (let n = 0; source.readyState < 2 && n < 100; n++) {
+                        await new Promise(r => setTimeout(r, 20));
+                    }
+                } catch (e) {
+                    stats.stopReason = e.message;
+                    break;
+                }
 
-                // Microseconds, and strictly increasing or the encoder rejects it
-                let timestamp = Math.round(meta.mediaTime * 1e6);
-                if (timestamp <= lastTimestamp) timestamp = lastTimestamp + 1;
-                lastTimestamp = timestamp;
+                // Hidden while that seek was under way: its picture cannot be
+                // trusted, so wait for the tab and take this frame again.
+                if (document.hidden) { i--; continue; }
 
                 let frame;
                 try {
-                    // The duration is not optional in practice. An encoded chunk
-                    // inherits it from its frame, and the muxer rejects any chunk
-                    // whose duration isn't a number - so without it every chunk was
-                    // refused, the muxer ended up empty, and the upload fell back to
-                    // the original. Only the last frame's length actually comes from
-                    // this; the muxer replaces the rest with the real gap between
-                    // timestamps as each following frame arrives.
-                    frame = new window.VideoFrame(source, { timestamp, duration: FRAME_DURATION_US });
+                    // The duration is not optional in practice: an encoded chunk
+                    // inherits it, and the muxer rejects any chunk without one. Only
+                    // the last frame's length comes from it - the muxer uses the real
+                    // gap between timestamps for the rest.
+                    frame = new window.VideoFrame(source, {
+                        timestamp: Math.round(i * 1e6 / FRAMERATE),
+                        duration: FRAME_DURATION_US,
+                    });
                 } catch (e) {
-                    return finish('billede kunne ikke læses: ' + e.message);
+                    stats.stopReason = 'billede kunne ikke læses: ' + e.message;
+                    break;
                 }
 
-                const isKeyFrame = count % Math.round(FRAMERATE * KEYFRAME_SECONDS) === 0;
                 try {
-                    encoder.encode(frame, { keyFrame: isKeyFrame });
+                    encoder.encode(frame, { keyFrame: i % keyInterval === 0 });
                 } catch (e) {
+                    stats.stopReason = 'encode fejlede: ' + e.message;
+                    break;
+                } finally {
                     frame.close();
-                    return finish('encode fejlede: ' + e.message);
                 }
-                frame.close();
+
                 count++;
+                clock.lastProgressAt = performance.now();
+                stats.clipSecondsReached = Number(((i + 1) / FRAMERATE).toFixed(2));
+                if (onProgress) onProgress(Math.min(0.99, (i + 1) / total));
 
-                stats.clipSecondsReached = Number(meta.mediaTime.toFixed(2));
-                if (onProgress) onProgress(Math.min(0.99, meta.mediaTime / duration));
-
-                // Keep the encoder from falling behind playback. Only one drain
-                // runs at a time: stacked drains each called play(), and play() on
-                // a clip that has already ended starts it again from the top.
-                if (!draining && encoder.encodeQueueSize > 12) {
-                    draining = true;
-                    source.pause();
-                    const drain = setInterval(() => {
-                        if (done) { clearInterval(drain); return; }
-                        if (encoder.encodeQueueSize <= 4) {
-                            clearInterval(drain);
-                            draining = false;
-                            clock.lastFrameAt = performance.now();
-                            source.play().catch(() => {});
-                        }
-                    }, 50);
+                while (encoder.encodeQueueSize > MAX_ENCODE_QUEUE && !encoderError && !stalled) {
+                    await new Promise(r => setTimeout(r, 20));
                 }
-
-                source.requestVideoFrameCallback(onFrame);
-            };
-
-            source.onended = () => finish('slut');
-            source.requestVideoFrameCallback(onFrame);
-            source.play().catch(e => finish('afspilning afvist: ' + e.message));
-        });
-
-        document.removeEventListener('visibilitychange', onVisibility);
+            }
+            if (!stats.stopReason) stats.stopReason = 'slut';
+        } finally {
+            clearInterval(watchdog);
+            document.removeEventListener('visibilitychange', onVisibility);
+        }
+        stats.frames = count;
 
         if (encoderError) {
             try { encoder.close(); } catch (e) { /* already gone */ }
@@ -335,18 +349,19 @@
             return fail('encoderfejl: ' + encoderError.message);
         }
 
-        // Most of the clip should have come through. A capture that stalled
-        // part way would otherwise produce a short file that looks plausible.
-        if (stats.frames < stats.expectedFrames * 0.8) {
+        // Every frame is reached deliberately now, so anything short of all of them
+        // means the capture was cut off - not a clip worth keeping.
+        if (count < total) {
             try { encoder.close(); } catch (e) { /* already gone */ }
             cleanUp();
-            return fail(`kun ${stats.frames} af ca. ${stats.expectedFrames} billeder blev fanget (${stats.stopReason})`);
+            return fail(`kun ${count} af ${total} billeder blev fanget (${stats.stopReason})`);
         }
 
         let blob;
         try {
             await encoder.flush();
             encoder.close();
+            if (encoderError) throw encoderError;
             muxer.finalize();
             blob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
         } catch (e) {
@@ -403,10 +418,9 @@
                 return out || { file, note: null };
             }
             if (/^video\//.test(file.type)) {
-                // Frames are captured as the clip plays. Switching tabs is allowed -
-                // the capture waits - but staying is the dependable way, so it is
-                // suggested rather than required.
-                const stage = 'Optimerer video, bliv gerne på fanen';
+                // Leaving the tab pauses the job rather than breaking it, so say that
+                // plainly instead of asking the uploader to stay put.
+                const stage = 'Optimerer video (holder pause hvis du forlader fanen)';
                 if (onProgress) onProgress(stage, 0);
                 const out = await optimiseVideo(file, r => onProgress && onProgress(stage, r));
                 return out || { file, note: null };

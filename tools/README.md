@@ -73,10 +73,18 @@ a portrait photo cannot arrive on its side.
 
 **Videos** are re-encoded with WebCodecs to H.264 at 2.5 Mbps, capped at
 1920x1080, with the index moved to the front — the same treatment the desktop
-tool gives. Frames are taken as the clip plays, so it can never run faster than
-the clip itself, and in practice runs a good deal slower — the first real upload
-of a 7.7 second clip took several minutes. That is fine; it is allowed to take
-as long as it needs.
+tool gives. It is slow - several minutes for a clip of a few seconds, because
+the encoder in the browser is - and it is allowed to take as long as it needs.
+
+Frames are reached by **seeking** to each one in turn, not by playing the clip
+and catching frames as they are painted. Playing was tried first and lost a
+quarter of the frames on a real upload: under the load of encoding, the browser
+skips painting some, and an unpainted frame is never reported. A seek lands on
+every timestamp asked for, so none can go missing.
+
+The encoding is **Constrained Baseline** H.264. High profile was tried first; the
+browser's hardware encoder used B-frames, which hand frames back out of order,
+and the muxer rejects that. Baseline cannot contain them.
 
 ## It always falls back
 
@@ -108,14 +116,13 @@ live upload through.
 ## Waiting, and switching tabs
 
 A slow capture is never cut off. The only thing that ends one early is a
-genuine freeze: the tab in front, the encoder idle, and still no new frame for
-a full 60 seconds.
+genuine freeze: the tab in front and still no progress for a full 60 seconds.
 
-Switching to another tab is allowed. A hidden tab stops presenting frames, so
-the capture simply waits, and the time spent away is not counted against it —
-it carries on when the tab comes back. Whether the browser pauses the clip or
-lets it run on while hidden is up to the browser, though, and if it runs on,
-the frames it played unseen are lost and the result is rejected as too short.
-Staying on the tab is still the dependable way.
+**Switching to another tab pauses the job.** No frames are taken while the tab
+is hidden, because a hidden page may not refresh the picture a seek lands on,
+and capturing then could record the same image over and over with nothing to
+flag it. Time away is not counted against the job; it carries on from where it
+stopped when the tab comes back. So leaving is safe - it just does not make
+progress while you are gone.
 
 The admin page logs what happened to each file in the browser console.

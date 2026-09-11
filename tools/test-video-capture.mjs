@@ -51,7 +51,7 @@ const ok = (name, cond, extra = '') => {
     else { fail++; console.log('  FAIL  ' + name + (extra ? '  -> ' + extra : '')); }
 };
 
-function load({ duration = 1, fps = 30, presentFrames = true, slowEncoder = false, clockSpeed = 1, unsupported = [] } = {}) {
+function load({ duration = 1, fps = 30, presentFrames = true, slowEncoder = false, clockSpeed = 1, unsupported = [], dropEvery = 0, seeksWhileHidden = false } = {}) {
     const video = { plays: 0, playAfterEnded: 0 };
     const enc = { encodes: 0, encodeAfterClose: 0, codec: null, asked: [] };
     const warnings = [];
@@ -66,29 +66,53 @@ function load({ duration = 1, fps = 30, presentFrames = true, slowEncoder = fals
     class FakeVideo {
         constructor() {
             this.videoWidth = 1080; this.videoHeight = 1920; this.duration = duration;
-            this.currentTime = 0; this.paused = true; this.ended = false;
-            this._cbs = []; this._timer = null;
+            this._time = 0; this.paused = true; this.ended = false;
+            this._cbs = []; this._timer = null; this._events = {}; this._painted = 0;
         }
         set src(v) { this._src = v; setTimeout(() => this.onloadedmetadata && this.onloadedmetadata(), 0); }
         get src() { return this._src; }
+        get readyState() { return 4; }
+        addEventListener(type, fn) { (this._events[type] = this._events[type] || []).push(fn); }
+        removeEventListener(type, fn) { this._events[type] = (this._events[type] || []).filter(x => x !== fn); }
+
+        // Seeking. A seek never completes for a clip that is frozen outright. In a
+        // hidden tab it depends on the browser: some suspend decoding there, others
+        // carry on - and those are the ones that could capture a stale picture.
+        get currentTime() { return this._time; }
+        set currentTime(t) {
+            this._time = t;
+            const complete = () => {
+                const waiting = (this._events.seeked || []).slice();
+                if (!waiting.length) return; // abandoned
+                if ((doc.hidden && !seeksWhileHidden) || !presentFrames) { setTimeout(complete, 20); return; }
+                waiting.forEach(fn => fn());
+            };
+            setTimeout(complete, 1);
+        }
+
+        // Playing, as the earlier capture relied on.
         requestVideoFrameCallback(cb) { this._cbs.push(cb); }
         play() {
             video.plays++;
-            if (this.ended) { video.playAfterEnded++; this.ended = false; this.currentTime = 0; }
+            if (this.ended) { video.playAfterEnded++; this.ended = false; this._time = 0; }
             this.paused = false;
             if (!presentFrames) return Promise.resolve();
             clearInterval(this._timer);
             this._timer = setInterval(() => {
                 if (this.paused || doc.hidden) return; // a background tab suspends playback
-                this.currentTime += 1 / fps;
-                if (this.currentTime >= this.duration) {
+                this._time += 1 / fps;
+                this._painted++;
+                if (this._time >= this.duration) {
                     clearInterval(this._timer);
                     this.paused = true; this.ended = true;
                     if (this.onended) this.onended();
                     return;
                 }
+                // Under load a browser skips painting some frames, and a frame that
+                // is never painted is never reported to requestVideoFrameCallback.
+                if (dropEvery && this._painted % dropEvery === 0) return;
                 const cbs = this._cbs; this._cbs = [];
-                cbs.forEach(cb => cb(0, { mediaTime: this.currentTime }));
+                cbs.forEach(cb => cb(0, { mediaTime: this._time }));
             }, 2);
             return Promise.resolve();
         }
@@ -223,7 +247,7 @@ console.log('\ncapture - frozen with the tab in front');
     const r = await within(t.M.prepare(clip()), 6000);
     ok('gives up instead of hanging', r !== 'TIMEOUT');
     ok('hands back the original', r !== 'TIMEOUT' && r.note === null);
-    ok('says why in the console', t.warnings.some(w => /ingen nye billeder/.test(w)), t.warnings.join(' | ') || 'no warning');
+    ok('says why in the console', t.warnings.some(w => /ingen (nye billeder|fremgang)/.test(w)), t.warnings.join(' | ') || 'no warning');
 }
 
 console.log('\ncapture - tab hidden for a long time, then brought back');
@@ -237,8 +261,37 @@ console.log('\ncapture - tab hidden for a long time, then brought back');
     await new Promise(r => setTimeout(r, 3000));
     t.doc.setHidden(false);
     const r = await within(run, 8000);
-    ok('does not give up while the tab is away', !t.warnings.some(w => /ingen nye billeder/.test(w)), t.warnings.join(' | '));
+    ok('does not give up while the tab is away', !t.warnings.some(w => /ingen (nye billeder|fremgang)/.test(w)), t.warnings.join(' | '));
     ok('finishes once the tab is back', r !== 'TIMEOUT' && r.note !== null, r === 'TIMEOUT' ? 'timed out' : 'fell back: ' + t.warnings.join(' | '));
+}
+
+console.log('\ncapture - browser keeps decoding in a hidden tab');
+{
+    // Seeks still complete while hidden here, so nothing but the capture itself
+    // stops frames being taken - and a hidden page's picture may be stale.
+    const t = load({ clockSpeed: 100, seeksWhileHidden: true, slowEncoder: true });
+    const run = t.M.prepare(clip());
+    await new Promise(r => setTimeout(r, 30));
+    t.doc.setHidden(true);
+    await new Promise(r => setTimeout(r, 100)); // a seek already under way may finish
+    const atHide = t.enc.encodes;
+    await new Promise(r => setTimeout(r, 1500));
+    const whileHidden = t.enc.encodes - atHide;
+    t.doc.setHidden(false);
+    const r = await within(run, 8000);
+    ok('takes no frames while the tab is hidden', whileHidden === 0, whileHidden + ' frames taken while hidden');
+    ok('finishes once the tab is back', r !== 'TIMEOUT' && r.note !== null, r === 'TIMEOUT' ? 'timed out' : t.warnings.join(' | '));
+}
+
+console.log('\ncapture - browser skips painting some frames');
+{
+    // One frame in four goes unpainted - close to the 54 of 232 lost on the real
+    // upload. Catching frames as they are painted can't get those back; seeking
+    // to each one doesn't depend on painting at all.
+    const t = load({ dropEvery: 4 });
+    const r = await within(t.M.prepare(clip()), 5000);
+    ok('encodes every frame', t.enc.encodes === 30, t.enc.encodes + ' of 30 encoded');
+    ok('produces an optimised file', r !== 'TIMEOUT' && r.note !== null, r === 'TIMEOUT' ? 'timed out' : t.warnings.join(' | '));
 }
 
 console.log('\ncapture - encoder that reorders frames');
