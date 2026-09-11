@@ -288,11 +288,10 @@ const TRANSLATIONS = {
         payment_error: "Der opstod en fejl ved behandlingen af din ordre. Prøv venligst igen.",
         subtotal: "Subtotal",
         shipping: "Fragt",
-        shipping_calc: "Beregnes ved kassen",
+        free: "Gratis",
         checkout_btn: "Gå til kassen",
         shipping_method: "Levering",
         ship_shop: "Pakkeshop (GLS)",
-        free_shipping: "Gratis fragt",
         select_shop: "Søg Pakkeshops",
         change_shop: "Søg Igen",
         shop_required: "Du skal vælge en pakkeshop for at fortsætte.",
@@ -903,9 +902,9 @@ function initCartPage() {
                         </div>
                     </div>
                     
-                    <div class="summary-total" style="margin: 2rem 0;">
+                    <div style="margin: 2rem 0;">
                         <div style="display:flex; justify-content:space-between; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: normal;"><span>${t('subtotal')}</span><span>DKK ${subtotal.toLocaleString('da-DK')}</span></div>
-                        <div style="display:flex; justify-content:space-between; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: normal;"><span>${t('shipping')}</span><span id="shipping-display">${shippingCost === 0 ? t('free_shipping') : `DKK ${shippingCost}`}</span></div>
+                        <div style="display:flex; justify-content:space-between; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: normal;"><span>${t('shipping')}</span><span id="shipping-display">${shippingCost === 0 ? t('free') : `DKK ${shippingCost}`}</span></div>
                         <div style="display:flex; justify-content:space-between; font-size: 1.25rem; font-weight: 500; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border);"><span>${t('total')}</span><span id="total-display">DKK ${(subtotal + shippingCost).toLocaleString('da-DK')}</span></div>
                     </div>
 
@@ -1101,7 +1100,7 @@ function initCartPage() {
         html += `</div>
             <div class="cart-summary">
                 <div class="summary-row"><span>${t('subtotal')}</span><span>DKK ${total.toLocaleString('da-DK')}</span></div>
-                <div class="summary-row"><span>${t('shipping')}</span><span style="color: #888;">${t('shipping_calc')}</span></div>
+                <div class="summary-row"><span>${t('shipping')}</span><span>${t('free')}</span></div>
                 <div class="summary-total"><span>${t('total')}</span><span>DKK ${total.toLocaleString('da-DK')}</span></div>
                 <button id="checkout-btn" class="btn-primary full-width">${t('checkout_btn')}</button>
             </div>
