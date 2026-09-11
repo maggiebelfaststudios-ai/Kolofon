@@ -366,6 +366,21 @@
                 return;
             }
 
+            // A booking with no parcel number leaves the customer nothing to
+            // track. Stop rather than send a confirmation with a blank field.
+            if (!shipData.tracking_number) {
+                const carryOn = confirm(
+                    'Forsendelsen blev oprettet, men Shipmondo returnerede intet pakkenummer.\n\n'
+                    + 'Kunden får så en besked uden tracking-nummer. Tjek forsendelsen i Shipmondo først.\n\n'
+                    + 'Fortsæt alligevel?'
+                );
+                if (!carryOn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Marker afsendt';
+                    return;
+                }
+            }
+
             // 2. Open the label so it can be printed
             btn.textContent = 'Henter label...';
             await openLabel(orderId);
