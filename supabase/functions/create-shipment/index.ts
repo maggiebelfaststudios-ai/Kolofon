@@ -3,9 +3,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // GLS Denmark, Shop Delivery. Kolofon ships to pakkeshops only.
 const PRODUCT_CODE = 'GLSDK_SD';
 
-// Every piece is packed the same way. If that ever varies, this becomes a
-// per-product value rather than a constant.
-const PARCEL_WEIGHT_GRAMS = 2000;
+// Roughly what one piece weighs boxed. Everything is packed the same way, so
+// a single figure multiplied by the quantity is close enough; if the pieces
+// ever differ this becomes a per-product value.
+const ITEM_WEIGHT_GRAMS = 2000;
 
 // A4 because the labels are printed on an ordinary office printer. The API
 // accepts only its own enum here - a plain 'pdf' is rejected outright.
@@ -87,6 +88,15 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: 'Ordren har ingen pakkeshop' }), { status: 400, headers: corsHeaders });
     }
 
+    // Everything goes in one box - two pieces fit inside the 5 kg band, and a
+    // third still fits physically, it just prices into the next band. One heavier
+    // parcel beats two labels there. What matters is declaring the real weight:
+    // GLS weighs parcels at intake, so under-declaring returns as a surcharge.
+    const itemCount = Array.isArray(order.items)
+      ? order.items.reduce((n: number, i: { quantity?: number }) => n + (Number(i.quantity) || 1), 0)
+      : 1;
+    const parcelWeight = ITEM_WEIGHT_GRAMS * Math.max(1, itemCount);
+
     // The receiver is taken from the order exactly as the customer entered it,
     // so nothing is retyped between here and the label.
     const shipmentBody = {
@@ -112,7 +122,7 @@ Deno.serve(async (req: Request) => {
           phone: customer.phone || '',
         },
       ],
-      parcels: [{ weight: PARCEL_WEIGHT_GRAMS }],
+      parcels: [{ weight: parcelWeight }],
     };
 
     const auth = `Basic ${btoa(`${SHIPMONDO_USERNAME}:${SHIPMONDO_APIKEY}`)}`;
