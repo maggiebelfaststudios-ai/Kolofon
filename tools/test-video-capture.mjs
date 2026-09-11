@@ -43,6 +43,37 @@ class EncodedVideoChunk {
 }
 class EncodedAudioChunk {}
 
+// The SPS and PPS from the file a real browser produced, and helpers to lay
+// H.264 data out the way an encoder does: each NAL unit behind a 4-byte length.
+const SPS = [0x67, 0x42, 0xc0, 0x28, 0x95, 0xb0, 0x11, 0x00, 0xf1, 0xe5, 0xe1, 0x00, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x03, 0x00, 0x3c, 0x0d, 0xa0, 0x88, 0x46, 0xe0];
+const PPS = [0x68, 0xca, 0x8f, 0x20];
+const nal = bytes => { const out = new Uint8Array(4 + bytes.length); new DataView(out.buffer).setUint32(0, bytes.length); out.set(bytes, 4); return out; };
+const joined = parts => { const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0)); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; } return out; };
+
+/** An avcC record. broken doubles the first byte of the SPS and PPS, as the real browser did. */
+function avcC(broken) {
+    const sps = broken ? [SPS[0], ...SPS] : SPS;
+    const pps = broken ? [PPS[0], ...PPS] : PPS;
+    return new Uint8Array([1, 0x42, 0xc0, 0x28, 0xff, 0xe1, sps.length >> 8, sps.length & 0xff, ...sps, 1, pps.length >> 8, pps.length & 0xff, ...pps]).buffer;
+}
+
+/** Reads the avcC out of a finished MP4 and checks it holds together. */
+function avcCIn(buffer) {
+    const b = Buffer.from(buffer);
+    const i = b.indexOf('avcC');
+    if (i === -1) return { found: false };
+    const box = b.subarray(i + 4, i - 4 + b.readUInt32BE(i - 4));
+    const spsLen = box.readUInt16BE(6);
+    const sps = box.subarray(8, 8 + spsLen);
+    const ppsLen = box.readUInt16BE(8 + spsLen + 1);
+    const pps = box.subarray(8 + spsLen + 3, 8 + spsLen + 3 + ppsLen);
+    return {
+        found: true,
+        valid: sps[1] === box[1] && sps[3] === box[3] && Buffer.compare(sps, Buffer.from(SPS)) === 0 && Buffer.compare(pps, Buffer.from(PPS)) === 0,
+        sps: [...sps.subarray(0, 5)].map(v => v.toString(16).padStart(2, '0')).join(' '),
+    };
+}
+
 const RealMp4Muxer = new Function('EncodedVideoChunk', 'EncodedAudioChunk', muxerSource + '\n;return Mp4Muxer;')(EncodedVideoChunk, EncodedAudioChunk);
 
 let pass = 0, fail = 0;
@@ -51,7 +82,7 @@ const ok = (name, cond, extra = '') => {
     else { fail++; console.log('  FAIL  ' + name + (extra ? '  -> ' + extra : '')); }
 };
 
-function load({ duration = 1, fps = 30, presentFrames = true, slowEncoder = false, clockSpeed = 1, unsupported = [], dropEvery = 0, seeksWhileHidden = false } = {}) {
+function load({ duration = 1, fps = 30, presentFrames = true, slowEncoder = false, clockSpeed = 1, unsupported = [], dropEvery = 0, seeksWhileHidden = false, brokenDescription = false, inbandParams = true } = {}) {
     const video = { plays: 0, playAfterEnded: 0 };
     const enc = { encodes: 0, encodeAfterClose: 0, codec: null, asked: [] };
     const warnings = [];
@@ -142,11 +173,15 @@ function load({ duration = 1, fps = 30, presentFrames = true, slowEncoder = fals
             // As a real encoder does, the chunk takes its timestamp and duration
             // from the frame - so a frame with no duration gives a chunk with none.
             const key = Boolean(opts && opts.keyFrame);
+            const filler = new Array(60).fill(0x80);
+            const data = key
+                ? joined([nal([0x09, 0xf0]), ...(inbandParams ? [nal(SPS), nal(PPS)] : []), nal([0x65, ...filler])])
+                : joined([nal([0x41, ...filler])]);
             const chunk = new EncodedVideoChunk({
                 type: key ? 'key' : 'delta',
                 timestamp: frame.timestamp,
                 duration: frame.duration,
-                data: new Uint8Array(100),
+                data,
             });
 
             if (this.usesBFrames && !key) {
@@ -168,7 +203,7 @@ function load({ duration = 1, fps = 30, presentFrames = true, slowEncoder = fals
                 this.encodeQueueSize--;
                 if (this.closed) return;
                 const meta = this.first
-                    ? { decoderConfig: { codec: this.codec, codedWidth: 1080, codedHeight: 1920, description: new Uint8Array([1, 66, 0, 40, 255, 225]).buffer } }
+                    ? { decoderConfig: { codec: this.codec, codedWidth: 1080, codedHeight: 1920, description: avcC(brokenDescription) } }
                     : undefined;
                 this.first = false;
                 this.output(chunk, meta);
@@ -225,6 +260,8 @@ console.log('\ncapture - normal run');
     const r = await within(t.M.prepare(clip()), 5000);
     ok('finishes', r !== 'TIMEOUT');
     ok('produces an optimised file', r !== 'TIMEOUT' && r.note !== null, r === 'TIMEOUT' ? 'timed out' : String(r.note));
+    const rec = r !== 'TIMEOUT' && r.note !== null ? avcCIn(await r.file.arrayBuffer()) : { found: false };
+    ok('writes a valid avcC record', rec.found && rec.valid, rec.found ? 'SPS starts ' + rec.sps : 'no avcC');
     await new Promise(r => setTimeout(r, 200)); // let any stray timers fire
     ok('nothing is encoded after the encoder closes', t.enc.encodeAfterClose === 0, `${t.enc.encodeAfterClose} stray encodes`);
     ok('the finished clip is never restarted', t.video.playAfterEnded === 0, `restarted ${t.video.playAfterEnded} times`);
@@ -292,6 +329,25 @@ console.log('\ncapture - browser skips painting some frames');
     const r = await within(t.M.prepare(clip()), 5000);
     ok('encodes every frame', t.enc.encodes === 30, t.enc.encodes + ' of 30 encoded');
     ok('produces an optimised file', r !== 'TIMEOUT' && r.note !== null, r === 'TIMEOUT' ? 'timed out' : t.warnings.join(' | '));
+}
+
+console.log('\ncapture - browser hands back a malformed avcC');
+{
+    // Exactly what the real upload produced: SPS and PPS with their first byte
+    // doubled. The file must not inherit it.
+    const t = load({ brokenDescription: true });
+    const r = await within(t.M.prepare(clip()), 5000);
+    ok('still produces an optimised file', r !== 'TIMEOUT' && r.note !== null, r === 'TIMEOUT' ? 'timed out' : t.warnings.join(' | '));
+    const rec = r !== 'TIMEOUT' && r.note !== null ? avcCIn(await r.file.arrayBuffer()) : { found: false };
+    ok('repairs the avcC record in the file', rec.found && rec.valid, rec.found ? 'SPS starts ' + rec.sps : 'no avcC');
+}
+
+console.log('\ncapture - malformed avcC with nothing to rebuild it from');
+{
+    const t = load({ brokenDescription: true, inbandParams: false });
+    const r = await within(t.M.prepare(clip()), 5000);
+    ok('hands back the original rather than a broken file', r !== 'TIMEOUT' && r.note === null);
+    ok('says why', t.warnings.some(w => /avcC/.test(w)), t.warnings.join(' | ') || 'no warning');
 }
 
 console.log('\ncapture - encoder that reorders frames');

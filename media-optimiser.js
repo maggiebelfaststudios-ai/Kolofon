@@ -114,6 +114,77 @@
             && typeof window.Mp4Muxer === 'object';
     }
 
+    /** Splits length-prefixed H.264 data into its NAL units. */
+    function nalUnits(bytes, lengthSize) {
+        const units = [];
+        let p = 0;
+        while (p + lengthSize <= bytes.length) {
+            let len = 0;
+            for (let k = 0; k < lengthSize; k++) len = len * 256 + bytes[p + k];
+            p += lengthSize;
+            if (len === 0 || p + len > bytes.length) break;
+            units.push(bytes.subarray(p, p + len));
+            p += len;
+        }
+        return units;
+    }
+
+    /**
+     * Returns an avcC record that is safe to put in the file.
+     *
+     * The muxer copies the encoder's description into the file untouched. On a
+     * real upload that description had the first byte of both its SPS and PPS
+     * written twice - 67 67 42 c0 28 where 67 42 c0 28 belongs. A decoder then
+     * reads 103 as the profile and every field after it one byte out. ffmpeg
+     * copes, because a correct copy also sits inside the keyframe, but Apple's
+     * decoder sets itself up from this record - so on an iPhone the video could
+     * simply fail to play. When the record does not hold together it is rebuilt
+     * from the copy in the keyframe. Returns null if there is nothing to rebuild
+     * from, so the caller can refuse the file rather than ship a broken one.
+     */
+    function checkedAvcC(description, keyframe) {
+        const rec = new Uint8Array(description);
+        const profile = rec[1];
+        const level = rec[3];
+        const lengthSize = (rec[4] & 3) + 1;
+
+        let ok = rec.length > 6 && rec[0] === 1;
+        let p = 5;
+        const spsCount = ok ? rec[p++] & 0x1f : 0;
+        for (let k = 0; ok && k < spsCount; k++) {
+            const len = (rec[p] << 8) | rec[p + 1];
+            const nal = rec.subarray(p + 2, p + 2 + len);
+            p += 2 + len;
+            // The profile and level inside the SPS must match the record's own
+            ok = nal.length > 3 && (nal[0] & 0x1f) === 7 && nal[1] === profile && nal[3] === level;
+        }
+        if (ok) return { record: description, repaired: false };
+
+        const data = new Uint8Array(keyframe.byteLength);
+        keyframe.copyTo(data);
+        const units = nalUnits(data, lengthSize);
+        const sps = units.find(u => (u[0] & 0x1f) === 7);
+        const pps = units.find(u => (u[0] & 0x1f) === 8);
+        if (!sps || !pps || sps.length < 4) return null;
+
+        const out = new Uint8Array(11 + sps.length + pps.length);
+        out[0] = 1;
+        out[1] = sps[1];                    // profile
+        out[2] = sps[2];                    // compatibility flags
+        out[3] = sps[3];                    // level
+        out[4] = 0xfc | (lengthSize - 1);
+        out[5] = 0xe0 | 1;                  // one SPS
+        out[6] = sps.length >> 8;
+        out[7] = sps.length & 0xff;
+        out.set(sps, 8);
+        let o = 8 + sps.length;
+        out[o++] = 1;                       // one PPS
+        out[o++] = pps.length >> 8;
+        out[o++] = pps.length & 0xff;
+        out.set(pps, o);
+        return { record: out.buffer, repaired: true };
+    }
+
     /** Loads a file into a detached <video> and waits for its metadata. */
     function loadVideo(file) {
         return new Promise((resolve, reject) => {
@@ -131,7 +202,7 @@
         const started = performance.now();
         // clipSecondsReached against frames shows whether frames were dropped or the
         // capture simply ran slowly - a gap between the two means dropped frames.
-        const stats = { frames: 0, expectedFrames: null, clipSecondsReached: 0, tabWasHidden: false, stopReason: null, codec: null };
+        const stats = { frames: 0, expectedFrames: null, clipSecondsReached: 0, tabWasHidden: false, stopReason: null, codec: null, avcCRepaired: false };
 
         // Every way out of here says which check tripped, in the console.
         const fail = reason => {
@@ -194,6 +265,15 @@
             output: (chunk, meta) => {
                 clock.lastProgressAt = performance.now();
                 try {
+                    const description = meta && meta.decoderConfig && meta.decoderConfig.description;
+                    if (description) {
+                        const checked = checkedAvcC(description, chunk);
+                        if (!checked) {
+                            throw new Error('encoderens avcC var ugyldig og kunne ikke genopbygges');
+                        }
+                        if (checked.repaired) stats.avcCRepaired = true;
+                        meta = { ...meta, decoderConfig: { ...meta.decoderConfig, description: checked.record } };
+                    }
                     muxer.addVideoChunk(chunk, meta);
                 } catch (e) {
                     encoderError = e;
