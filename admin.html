@@ -449,28 +449,47 @@
         async function deleteProduct(id) {
             if(!confirm('Er du sikker på, at du vil slette dette produkt fra databasen?')) return;
 
-            // 1. Get the product to find the file path
-            const { data: product, error: fetchError } = await client
+            // The photo, blueprint and video are files in storage that the row only
+            // points at. This used to look for a 3D model under /models/ - left over
+            // from before the site used photos - and so never removed any of them,
+            // leaving every deleted product's media behind. Read the paths first.
+            const { data: product } = await client
                 .from('products')
-                .select('src')
+                .select('photo, background, video')
                 .eq('id', id)
                 .single();
 
-            // 2. Delete file from Storage (if it exists and is in our bucket)
-            if (product && product.src && product.src.includes('/models/')) {
-                const fileName = product.src.split('/models/').pop();
-                const { error: storageError } = await client.storage.from('images').remove([fileName]);
-                if (storageError) console.error('Fejl ved sletning af fil:', storageError);
-            }
-
-            // 3. Delete row from Database
+            // The row goes first. If removing the files then fails, the worst left
+            // over is unused files; the other order could leave a product pointing
+            // at files that no longer exist.
             const { error } = await client.from('products').delete().eq('id', id);
-            
             if (error) {
                 alert('Fejl ved sletning: ' + error.message);
-            } else {
-                loadProducts();
+                return;
             }
+
+            const files = ['photo', 'background', 'video']
+                .map(column => product && product[column])
+                // Only ours in the bucket. Older products point at files in the repo.
+                .filter(url => url && url.includes('/images/'))
+                .map(url => url.split('/images/').pop());
+
+            if (files.length) {
+                // Never remove a file some other product still shows
+                const { data: others } = await client.from('products').select('photo, background, video');
+                const stillUsed = new Set((others || [])
+                    .flatMap(p => [p.photo, p.background, p.video])
+                    .filter(url => url && url.includes('/images/'))
+                    .map(url => url.split('/images/').pop()));
+                const unused = files.filter(name => !stillUsed.has(name));
+
+                if (unused.length) {
+                    const { error: storageError } = await client.storage.from('images').remove(unused);
+                    if (storageError) console.warn('Produktet er slettet, men filerne blev liggende:', storageError);
+                }
+            }
+
+            loadProducts();
         }
 
         addForm.addEventListener('submit', async (e) => {
