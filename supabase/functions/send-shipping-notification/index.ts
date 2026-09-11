@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { callerIsAdmin } from '../_shared/admin.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -15,6 +16,11 @@ Deno.serve(async (req: Request) => {
     'Access-Control-Allow-Origin': '*',
     'Content-Type': 'application/json',
   };
+
+  // This emails a customer, so only the admin may trigger it.
+  if (!(await callerIsAdmin(req))) {
+    return new Response(JSON.stringify({ error: 'Kun butikkens admin kan sende forsendelsesbeskeder' }), { status: 403, headers: corsHeaders });
+  }
 
   try {
     const { order_id } = await req.json();

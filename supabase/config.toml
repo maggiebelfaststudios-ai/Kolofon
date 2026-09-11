@@ -22,13 +22,10 @@ verify_jwt = false
 [functions.pickup-points]
 verify_jwt = false
 
+# create-shipment and send-shipping-notification keep JWT verification on,
+# but it is NOT what protects them. The gateway accepted the site's public key
+# as though it were a login, so anyone could reach both - booking real GLS
+# labels or emailing customers. Each now checks the caller with is_admin() in
+# the database (supabase/functions/_shared/admin.ts) and answers 403 otherwise.
 [functions.create-shipment]
 verify_jwt = true
-
-# create-shipment is called from the admin panel with the signed-in session
-# token, so it keeps JWT verification on - only a logged-in admin may book a
-# real GLS parcel.
-
-# send-shipping-notification deliberately keeps JWT verification on: the admin
-# panel calls it with the logged-in session's access token, so only a signed-in
-# admin can trigger a shipping email.

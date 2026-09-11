@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { callerIsAdmin } from '../_shared/admin.ts';
 
 // GLS Denmark, Shop Delivery. Kolofon ships to pakkeshops only.
 const PRODUCT_CODE = 'GLSDK_SD';
@@ -40,6 +41,12 @@ const corsHeaders = {
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Booking spends real money from the Shipmondo balance, so the caller must
+  // be the admin - being signed in, or holding the public key, is not enough.
+  if (!(await callerIsAdmin(req))) {
+    return new Response(JSON.stringify({ error: 'Kun butikkens admin kan oprette forsendelser' }), { status: 403, headers: corsHeaders });
   }
 
   try {
