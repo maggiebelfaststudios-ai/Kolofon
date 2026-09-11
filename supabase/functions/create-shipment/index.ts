@@ -7,6 +7,15 @@ const PRODUCT_CODE = 'GLSDK_SD';
 // per-product value rather than a constant.
 const PARCEL_WEIGHT_GRAMS = 2000;
 
+// A4 because the labels are printed on an ordinary office printer. The API
+// accepts only its own enum here - a plain 'pdf' is rejected outright.
+const LABEL_FORMAT = 'a4_pdf';
+
+// Required by the API. EMAIL_NT is the carrier notifying the customer that the
+// parcel is ready to collect, which a shop delivery needs. SMS_NT is available
+// too but is billed per message.
+const SERVICE_CODES = 'EMAIL_NT';
+
 const SENDER = {
   type: 'sender',
   name: 'Kolofon',
@@ -84,9 +93,12 @@ Deno.serve(async (req: Request) => {
       own_agreement: false,
       test_mode: isTest,
       product_code: PRODUCT_CODE,
-      pickup_point_id: String(servicePoint.id),
+      service_codes: SERVICE_CODES,
+      // service_point_id, not pickup_point_id. The customer picked this shop at
+      // checkout, so the parcel must go there rather than to an automatic choice.
+      service_point_id: String(servicePoint.id),
       reference: order_id,
-      label_format: 'pdf',
+      label_format: LABEL_FORMAT,
       parties: [
         SENDER,
         {
@@ -119,19 +131,16 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // The exact field names are not documented in the public pages, so log the
-    // whole response and record which candidate actually held the number. Once
-    // a booking has confirmed that, the guesswork here can become a single read.
     console.log('Shipmondo shipment response:', JSON.stringify(data));
 
+    // Shipmondo calls the parcel number pkg_no, on the shipment and on each
+    // parcel. It is not package_number, tracking_number or barcode - none of
+    // those exist in the API, which is why this used to come back empty.
     const parcel = Array.isArray(data.parcels) ? data.parcels[0] : null;
     const candidates: [string, unknown][] = [
-      ['package_number', data.package_number],
-      ['tracking_number', data.tracking_number],
-      ['barcode', data.barcode],
-      ['parcels[0].package_number', parcel?.package_number],
-      ['parcels[0].tracking_number', parcel?.tracking_number],
-      ['parcels[0].barcode', parcel?.barcode],
+      ['pkg_no', data.pkg_no],
+      ['parcels[0].pkg_no', parcel?.pkg_no],
+      ['parcels[0].pkg_nos[0]', Array.isArray(parcel?.pkg_nos) ? parcel.pkg_nos[0] : null],
     ];
     const hit = candidates.find(([, value]) => Boolean(value));
     const trackingNumber = hit ? String(hit[1]) : null;
@@ -144,16 +153,21 @@ Deno.serve(async (req: Request) => {
       console.error('Top-level keys were:', Object.keys(data).join(', '));
     }
 
+    // Returned as an array of labels, only when label_format was asked for.
+    const labelBase64 = Array.isArray(data.labels) && data.labels[0]
+      ? data.labels[0].base64 || null
+      : null;
+
     if (isTest) {
       // The label is a whole PDF, so report that it arrived rather than echo it
-      const { label_base64, ...rest } = data;
+      const { labels, ...rest } = data;
       return new Response(JSON.stringify({
         success: true,
         test_mode: true,
         tracking_number: trackingNumber,
         tracking_field: trackingField,
-        has_label: Boolean(label_base64),
-        label_bytes: label_base64 ? label_base64.length : 0,
+        has_label: Boolean(labelBase64),
+        label_bytes: labelBase64 ? labelBase64.length : 0,
         response: rest,
       }), { status: 200, headers: corsHeaders });
     }
@@ -163,7 +177,7 @@ Deno.serve(async (req: Request) => {
       .update({
         tracking_number: trackingNumber,
         shipmondo_id: data.id ? String(data.id) : null,
-        label_base64: data.label_base64 || null,
+        label_base64: labelBase64,
       })
       .eq('order_id', order_id);
 
@@ -182,7 +196,7 @@ Deno.serve(async (req: Request) => {
       success: true,
       tracking_number: trackingNumber,
       tracking_field: trackingField,
-      has_label: Boolean(data.label_base64),
+      has_label: Boolean(labelBase64),
     }), { status: 200, headers: corsHeaders });
 
   } catch (err) {
