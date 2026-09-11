@@ -327,8 +327,8 @@
                     'Forbindelsen virker.',
                     ``,
                     `Tracking-nummer: ${data.tracking_number || "(ingen)"}`,
-                    `Feltet det kom fra: ${data.tracking_field || "(intet felt matchede)"}`,
-                    `Label modtaget: ${data.has_label ? "ja" : "nej"}`,
+                    `Kasser bestilt: ${data.parcels_booked}`,
+                    `Labels modtaget: ${data.labels_returned}`,
                     ``,
                     'Hele svaret ligger i konsollen (F12).',
                 ].join('\n'));
@@ -422,13 +422,28 @@
                 return;
             }
 
-            const binary = atob(data.label_base64);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-            const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+            // Stored as a JSON list of labels, one per box. Orders booked before
+            // splitting existed hold a bare base64 string, so both are accepted.
+            let labels;
+            try {
+                const parsed = JSON.parse(data.label_base64);
+                labels = Array.isArray(parsed) ? parsed : [data.label_base64];
+            } catch (e) {
+                labels = [data.label_base64];
+            }
 
-            window.open(url, '_blank');
-            setTimeout(() => URL.revokeObjectURL(url), 60000);
+            if (labels.length > 1) {
+                alert(`Denne ordre er pakket i ${labels.length} kasser. Der åbnes ${labels.length} labels - tillad pop op-vinduer hvis browseren spørger.`);
+            }
+
+            labels.forEach(b64 => {
+                const binary = atob(b64);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+                window.open(url, '_blank');
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+            });
         }
 
         async function deleteProduct(id) {

@@ -8,6 +8,9 @@ const PRODUCT_CODE = 'GLSDK_SD';
 // ever differ this becomes a per-product value.
 const ITEM_WEIGHT_GRAMS = 2000;
 
+// What the boxes physically hold. A larger order is split across several.
+const MAX_ITEMS_PER_BOX = 3;
+
 // A4 because the labels are printed on an ordinary office printer. The API
 // accepts only its own enum here - a plain 'pdf' is rejected outright.
 const LABEL_FORMAT = 'a4_pdf';
@@ -88,14 +91,22 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: 'Ordren har ingen pakkeshop' }), { status: 400, headers: corsHeaders });
     }
 
-    // Everything goes in one box - two pieces fit inside the 5 kg band, and a
-    // third still fits physically, it just prices into the next band. One heavier
-    // parcel beats two labels there. What matters is declaring the real weight:
-    // GLS weighs parcels at intake, so under-declaring returns as a surcharge.
-    const itemCount = Array.isArray(order.items)
+    const itemCount = Math.max(1, Array.isArray(order.items)
       ? order.items.reduce((n: number, i: { quantity?: number }) => n + (Number(i.quantity) || 1), 0)
-      : 1;
-    const parcelWeight = ITEM_WEIGHT_GRAMS * Math.max(1, itemCount);
+      : 1);
+
+    // The boxes hold three pieces, so anything larger is split. The pieces are
+    // then spread evenly rather than filling each box to the brim: four go as
+    // 2+2, which keeps both boxes inside the 1-5 kg band, where 3+1 would push
+    // one of them into the dearer band for nothing. Each box declares what is
+    // really in it - GLS weighs parcels at intake, so under-declaring comes
+    // back later as a surcharge.
+    const parcelCount = Math.ceil(itemCount / MAX_ITEMS_PER_BOX);
+    const base = Math.floor(itemCount / parcelCount);
+    const remainder = itemCount % parcelCount;
+    const parcels = Array.from({ length: parcelCount }, (_, i) => ({
+      weight: ITEM_WEIGHT_GRAMS * (base + (i < remainder ? 1 : 0)),
+    }));
 
     // The receiver is taken from the order exactly as the customer entered it,
     // so nothing is retyped between here and the label.
@@ -122,7 +133,7 @@ Deno.serve(async (req: Request) => {
           phone: customer.phone || '',
         },
       ],
-      parcels: [{ weight: parcelWeight }],
+      parcels,
     };
 
     const auth = `Basic ${btoa(`${SHIPMONDO_USERNAME}:${SHIPMONDO_APIKEY}`)}`;
@@ -143,30 +154,31 @@ Deno.serve(async (req: Request) => {
 
     console.log('Shipmondo shipment response:', JSON.stringify(data));
 
-    // Shipmondo calls the parcel number pkg_no, on the shipment and on each
-    // parcel. It is not package_number, tracking_number or barcode - none of
-    // those exist in the API, which is why this used to come back empty.
-    const parcel = Array.isArray(data.parcels) ? data.parcels[0] : null;
-    const candidates: [string, unknown][] = [
-      ['pkg_no', data.pkg_no],
-      ['parcels[0].pkg_no', parcel?.pkg_no],
-      ['parcels[0].pkg_nos[0]', Array.isArray(parcel?.pkg_nos) ? parcel.pkg_nos[0] : null],
-    ];
-    const hit = candidates.find(([, value]) => Boolean(value));
-    const trackingNumber = hit ? String(hit[1]) : null;
-    const trackingField = hit ? hit[0] : null;
+    // Shipmondo calls the parcel number pkg_no, one per parcel. A split order
+    // has several, so they are collected and stored together rather than the
+    // first one standing in for the rest.
+    const responseParcels = Array.isArray(data.parcels) ? data.parcels : [];
+    const numbers: string[] = [];
+    for (const p of responseParcels) {
+      const fromList = Array.isArray(p?.pkg_nos) ? p.pkg_nos.filter(Boolean) : [];
+      if (fromList.length) numbers.push(...fromList.map(String));
+      else if (p?.pkg_no) numbers.push(String(p.pkg_no));
+    }
+    if (!numbers.length && data.pkg_no) numbers.push(String(data.pkg_no));
 
-    if (trackingNumber) {
-      console.log(`Tracking number came from the field: ${trackingField}`);
-    } else {
-      console.error('Shipment created but no tracking number found in the response');
+    const trackingNumber = numbers.length ? numbers.join(', ') : null;
+
+    if (!trackingNumber) {
+      console.error('Shipment created but no pkg_no in the response');
       console.error('Top-level keys were:', Object.keys(data).join(', '));
     }
 
-    // Returned as an array of labels, only when label_format was asked for.
-    const labelBase64 = Array.isArray(data.labels) && data.labels[0]
-      ? data.labels[0].base64 || null
-      : null;
+    // One label per parcel. Stored as a JSON list so a split order can print
+    // all of its labels, not just the first box.
+    const labelList: string[] = Array.isArray(data.labels)
+      ? data.labels.map((l: { base64?: string }) => l?.base64).filter(Boolean)
+      : [];
+    const labelBase64 = labelList.length ? JSON.stringify(labelList) : null;
 
     if (isTest) {
       // The label is a whole PDF, so report that it arrived rather than echo it
@@ -175,9 +187,8 @@ Deno.serve(async (req: Request) => {
         success: true,
         test_mode: true,
         tracking_number: trackingNumber,
-        tracking_field: trackingField,
-        has_label: Boolean(labelBase64),
-        label_bytes: labelBase64 ? labelBase64.length : 0,
+        parcels_booked: parcels.length,
+        labels_returned: labelList.length,
         response: rest,
       }), { status: 200, headers: corsHeaders });
     }
@@ -205,7 +216,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({
       success: true,
       tracking_number: trackingNumber,
-      tracking_field: trackingField,
+      parcels_booked: parcels.length,
       has_label: Boolean(labelBase64),
     }), { status: 200, headers: corsHeaders });
 
