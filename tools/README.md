@@ -71,7 +71,7 @@ the upload starts. Nothing to remember; saving a product does it.
 re-encoded as WebP at quality 0.82. EXIF rotation is applied while decoding, so
 a portrait photo cannot arrive on its side.
 
-**Videos** are re-encoded with WebCodecs to H.264 at 2.5 Mbps, capped at
+**Videos** are re-encoded with WebCodecs to H.264 at 3.5 Mbps, capped at
 1920x1080, with the index moved to the front — the same treatment the desktop
 tool gives. It is slow - several minutes for a clip of a few seconds, because
 the encoder in the browser is - and it is allowed to take as long as it needs.
@@ -93,10 +93,13 @@ worst case is that nothing was saved:
 
 - browser missing WebCodecs, `createImageBitmap`, or `requestVideoFrameCallback`
 - the CDN muxer failing to load
-- no H.264 encoder (checked with `VideoEncoder.isConfigSupported`)
+- no Constrained Baseline H.264 encoder at any of the levels tried
 - a file the browser cannot decode, HEIC being the likely one
 - a PNG on a browser with no WebP encoder — JPEG would lose its transparency
 - a result that came out **larger** than the original
+- a capture that did not reach every frame
+- a malformed avcC record from the encoder, with no correct copy in the keyframe
+  to rebuild it from
 - a video whose re-encode does not come back the same length
 
 That last one is the important one. A clip that encodes but plays for two
@@ -112,6 +115,15 @@ The capture test runs against the **real** mp4-muxer, fetched from the URL
 admin.html pins, so it needs a network connection. A fake muxer was tried first
 and accepted chunks the real one rejects - which let the bug that broke the first
 live upload through.
+
+## The avcC record
+
+The encoder in at least one browser writes the first byte of the SPS and PPS
+twice in the avcC record it hands back. ffmpeg recovers by using the copies
+inside the keyframe, but Apple's decoder builds itself from the record, so an
+iPhone could fail to play the file. The record is checked on every upload and
+rebuilt from the keyframe when it does not hold together; the console log shows
+`avcCRepaired: true` when that happened.
 
 ## Waiting, and switching tabs
 
