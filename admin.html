@@ -360,7 +360,15 @@
             const shipData = await shipRes.json();
 
             if (!shipRes.ok) {
-                alert('Fejl ved oprettelse af forsendelse: ' + (shipData.error || 'Ukendt fejl'));
+                console.error('Shipmondo-fejl:', shipData);
+                const why = shipData.details
+                    ? JSON.stringify(shipData.details, null, 2)
+                    : '';
+                alert(
+                    'Fejl ved oprettelse af forsendelse:\n\n'
+                    + (shipData.error || 'Ukendt fejl')
+                    + (why ? '\n\n' + why.slice(0, 1200) : '')
+                );
                 btn.disabled = false;
                 btn.textContent = 'Marker afsendt';
                 return;
