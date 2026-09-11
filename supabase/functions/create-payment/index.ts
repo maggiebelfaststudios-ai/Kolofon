@@ -5,8 +5,9 @@ const SITE_URL = 'https://www.kolofon.dk';
 // Shipping rates. These must match the values shown in main.js, but they are
 // deliberately duplicated here: the browser's figure cannot be trusted, so the
 // charge is worked out from these, not from anything the page sends.
-const SHIPPING_THRESHOLD = 1500;
-const SHIPPING_COST_SHOP = 39;
+// Delivery is free - its cost sits in the product price instead. Named rather
+// than a bare 0 so there is one obvious place to change if that reverses.
+const SHIPPING_COST = 0;
 
 Deno.serve(async (req: Request) => {
   // CORS preflight
@@ -131,7 +132,7 @@ Deno.serve(async (req: Request) => {
     // Pakkeshop is the only method on sale. The request's method is ignored
     // rather than trusted, so a crafted one cannot pick a rate that is not offered.
     const method = 'shop';
-    const shippingCost = subtotal > SHIPPING_THRESHOLD ? 0 : SHIPPING_COST_SHOP;
+    const shippingCost = SHIPPING_COST;
 
     if (!shippingDetails.servicePoint) {
       return new Response(JSON.stringify({ error: 'Vælg venligst en pakkeshop' }), {

@@ -243,8 +243,9 @@ if (typeof supabase !== 'undefined') {
 }
 
 // --- CONFIGURATION ---
-const SHIPPING_THRESHOLD = 1500;
-const SHIPPING_COST_SHOP = 39;
+// Delivery is free; the cost is carried in the product price. The server
+// decides the real charge either way - this only drives what is displayed.
+const SHIPPING_COST_SHOP = 0;
 
 // --- TRANSLATIONS ---
 const TRANSLATIONS = {
@@ -290,7 +291,7 @@ const TRANSLATIONS = {
         shipping_calc: "Beregnes ved kassen",
         checkout_btn: "Gå til kassen",
         shipping_method: "Levering",
-        ship_shop: "Pakkeshop (GLS) - 39 kr",
+        ship_shop: "Pakkeshop (GLS)",
         free_shipping: "Gratis fragt",
         select_shop: "Søg Pakkeshops",
         change_shop: "Søg Igen",
@@ -853,8 +854,7 @@ function initCartPage() {
         const cart = JSON.parse(localStorage.getItem('kolofon_cart') || '[]');
         const subtotal = cart.reduce((sum, item) => sum + (item.priceValue * item.quantity), 0);
 
-        // Default to 'shop' (39 DKK) unless subtotal > 1500 (Free)
-        let shippingCost = subtotal > SHIPPING_THRESHOLD ? 0 : SHIPPING_COST_SHOP;
+        const shippingCost = SHIPPING_COST_SHOP;
         
         cartContainer.innerHTML = `
             <div class="checkout-form-container" style="max-width: 500px; margin: 0 auto;">
@@ -905,7 +905,7 @@ function initCartPage() {
                     
                     <div class="summary-total" style="margin: 2rem 0;">
                         <div style="display:flex; justify-content:space-between; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: normal;"><span>${t('subtotal')}</span><span>DKK ${subtotal.toLocaleString('da-DK')}</span></div>
-                        <div style="display:flex; justify-content:space-between; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: normal;"><span>${t('shipping')}</span><span id="shipping-display">DKK ${shippingCost}</span></div>
+                        <div style="display:flex; justify-content:space-between; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: normal;"><span>${t('shipping')}</span><span id="shipping-display">${shippingCost === 0 ? t('free_shipping') : `DKK ${shippingCost}`}</span></div>
                         <div style="display:flex; justify-content:space-between; font-size: 1.25rem; font-weight: 500; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border);"><span>${t('total')}</span><span id="total-display">DKK ${(subtotal + shippingCost).toLocaleString('da-DK')}</span></div>
                     </div>
 
@@ -1001,13 +1001,9 @@ function initCartPage() {
 
         searchBtn.addEventListener('click', fetchPickupPoints);
 
-        // Trigger initial calculation check for free shipping
-        if (subtotal > SHIPPING_THRESHOLD) {
-            shippingCost = 0;
-            shippingDisplay.textContent = t('free_shipping');
-            totalDisplay.textContent = `DKK ${subtotal.toLocaleString('da-DK')}`;
-            if (shopWrapper) shopWrapper.style.display = 'block'; // Default is shop
-        }
+        // Shipping is free for everyone, so there is no threshold to check.
+        // The pakkeshop picker is the only delivery option.
+        if (shopWrapper) shopWrapper.style.display = 'block';
 
         document.getElementById('purchase-form').addEventListener('submit', async (e) => {
             e.preventDefault();
