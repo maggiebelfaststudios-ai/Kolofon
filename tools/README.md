@@ -93,6 +93,12 @@ That last one is the important one. A clip that encodes but plays for two
 seconds instead of fifteen would be worse than no saving at all, so the output
 is loaded back and its duration checked before it is trusted.
 
-Run `node tools/test-media-optimiser.mjs` to exercise those paths.
+Run `node tools/test-media-optimiser.mjs` to exercise those paths, and
+`node tools/test-video-capture.mjs` to simulate the capture loop itself - a
+stalled capture, an encoder that falls behind, and a clip that ends.
+
+Keep the tab in front while a video optimises. Frames are captured as the clip
+plays, and a hidden tab stops presenting them; the capture now gives up after
+15 seconds without a frame rather than hanging.
 
 The admin page logs what happened to each file in the browser console.

@@ -106,13 +106,26 @@
     }
 
     async function optimiseVideo(file, onProgress) {
-        if (!videoSupported()) return null;
+        const started = performance.now();
+        const stats = { frames: 0, expectedFrames: null, tabWasHidden: false, stopReason: null };
+
+        // Every way out of here used to be a bare return null, so a failed run
+        // gave no hint of which check tripped. Each one now says so in the console.
+        const fail = reason => {
+            console.warn('Video-optimering sprang over: ' + reason, {
+                seconds: ((performance.now() - started) / 1000).toFixed(1),
+                ...stats,
+            });
+            return null;
+        };
+
+        if (!videoSupported()) return fail('browseren mangler WebCodecs eller muxeren blev ikke indlæst');
 
         let source;
         try {
             source = await loadVideo(file);
         } catch (e) {
-            return null;
+            return fail('filen kunne ikke læses som video');
         }
 
         const cleanUp = () => URL.revokeObjectURL(source.src);
@@ -120,7 +133,11 @@
         const sw = source.videoWidth;
         const sh = source.videoHeight;
         const duration = source.duration;
-        if (!sw || !sh || !isFinite(duration) || duration <= 0) { cleanUp(); return null; }
+        if (!sw || !sh || !isFinite(duration) || duration <= 0) {
+            cleanUp();
+            return fail('videoen har ingen brugbare dimensioner eller varighed');
+        }
+        stats.expectedFrames = Math.round(duration * FRAMERATE);
 
         // Cap the long edge at 1920 and the short at 1080, keeping the shape.
         const longEdge = Math.max(sw, sh);
@@ -143,7 +160,13 @@
 
         let encoderError = null;
         const encoder = new window.VideoEncoder({
-            output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+            output: (chunk, meta) => {
+                try {
+                    muxer.addVideoChunk(chunk, meta);
+                } catch (e) {
+                    encoderError = e;
+                }
+            },
             error: e => { encoderError = e; },
         });
 
@@ -158,21 +181,53 @@
         try {
             // Not every build ships an H.264 encoder, so ask rather than assume
             const support = await window.VideoEncoder.isConfigSupported(config);
-            if (!support || !support.supported) { cleanUp(); return null; }
+            if (!support || !support.supported) {
+                cleanUp();
+                return fail('browseren har ingen H.264-encoder til denne opløsning');
+            }
             encoder.configure(config);
         } catch (e) {
             cleanUp();
-            return null;
+            return fail('encoderen kunne ikke konfigureres: ' + e.message);
         }
+
+        // A hidden tab stops presenting frames, so the capture silently stalls.
+        // Noted rather than prevented - it explains a slow or failed run.
+        const onVisibility = () => { if (document.hidden) stats.tabWasHidden = true; };
+        document.addEventListener('visibilitychange', onVisibility);
 
         // Frames are pulled as they are presented, so the encode runs at
         // playback speed. A short product clip is a few seconds of waiting.
-        const frames = await new Promise(resolve => {
+        stats.frames = await new Promise(resolve => {
             let count = 0;
             let lastTimestamp = -1;
+            let done = false;
+            let draining = false;
+            let lastFrameAt = performance.now();
+
+            // One way to stop. Before this the loop carried on after the clip
+            // ended, feeding stray frames to an encoder that was being flushed.
+            const finish = why => {
+                if (done) return;
+                done = true;
+                stats.stopReason = why;
+                clearInterval(watchdog);
+                source.pause();
+                resolve(count);
+            };
+
+            // Give up rather than hang. A stalled capture used to sit there for
+            // minutes before failing anyway.
+            const watchdog = setInterval(() => {
+                if (!draining && performance.now() - lastFrameAt > 15000) {
+                    finish('ingen nye billeder i 15 sekunder');
+                }
+            }, 1000);
 
             const onFrame = (now, meta) => {
-                if (encoderError) return resolve(count);
+                if (done) return;
+                if (encoderError) return finish('encoderfejl: ' + encoderError.message);
+                lastFrameAt = performance.now();
 
                 // Microseconds, and strictly increasing or the encoder rejects it
                 let timestamp = Math.round(meta.mediaTime * 1e6);
@@ -183,7 +238,7 @@
                 try {
                     frame = new window.VideoFrame(source, { timestamp });
                 } catch (e) {
-                    return resolve(count);
+                    return finish('billede kunne ikke læses: ' + e.message);
                 }
 
                 const isKeyFrame = count % Math.round(FRAMERATE * KEYFRAME_SECONDS) === 0;
@@ -191,19 +246,25 @@
                     encoder.encode(frame, { keyFrame: isKeyFrame });
                 } catch (e) {
                     frame.close();
-                    return resolve(count);
+                    return finish('encode fejlede: ' + e.message);
                 }
                 frame.close();
                 count++;
 
                 if (onProgress) onProgress(Math.min(0.99, meta.mediaTime / duration));
 
-                // Keep the encoder from falling behind playback
-                if (encoder.encodeQueueSize > 12) {
+                // Keep the encoder from falling behind playback. Only one drain
+                // runs at a time: stacked drains each called play(), and play() on
+                // a clip that has already ended starts it again from the top.
+                if (!draining && encoder.encodeQueueSize > 12) {
+                    draining = true;
                     source.pause();
                     const drain = setInterval(() => {
+                        if (done) { clearInterval(drain); return; }
                         if (encoder.encodeQueueSize <= 4) {
                             clearInterval(drain);
+                            draining = false;
+                            lastFrameAt = performance.now();
                             source.play().catch(() => {});
                         }
                     }, 50);
@@ -212,16 +273,25 @@
                 source.requestVideoFrameCallback(onFrame);
             };
 
-            source.onended = () => resolve(count);
+            source.onended = () => finish('slut');
             source.requestVideoFrameCallback(onFrame);
-            source.play().catch(() => resolve(0));
+            source.play().catch(e => finish('afspilning afvist: ' + e.message));
         });
 
-        // A clip that yielded almost no frames means the capture went wrong
-        if (encoderError || frames < 2) {
+        document.removeEventListener('visibilitychange', onVisibility);
+
+        if (encoderError) {
             try { encoder.close(); } catch (e) { /* already gone */ }
             cleanUp();
-            return null;
+            return fail('encoderfejl: ' + encoderError.message);
+        }
+
+        // Most of the clip should have come through. A capture that stalled
+        // part way would otherwise produce a short file that looks plausible.
+        if (stats.frames < stats.expectedFrames * 0.8) {
+            try { encoder.close(); } catch (e) { /* already gone */ }
+            cleanUp();
+            return fail(`kun ${stats.frames} af ca. ${stats.expectedFrames} billeder blev fanget (${stats.stopReason})`);
         }
 
         let blob;
@@ -232,23 +302,32 @@
             blob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
         } catch (e) {
             cleanUp();
-            return null;
+            return fail('filen kunne ikke færdiggøres: ' + e.message);
         }
         cleanUp();
 
-        if (blob.size >= file.size) return null;
+        if (blob.size >= file.size) {
+            return fail(`resultatet (${mb(blob.size)}) var ikke mindre end originalen (${mb(file.size)})`);
+        }
 
         // Last check before trusting it: the result has to be readable, and as
         // long as the original. A file that encoded but plays for two seconds
         // instead of fifteen is worse than no saving at all.
         try {
             const check = await loadVideo(new File([blob], 'check.mp4', { type: 'video/mp4' }));
-            const ok = isFinite(check.duration) && Math.abs(check.duration - duration) < 0.75;
+            const got = check.duration;
             URL.revokeObjectURL(check.src);
-            if (!ok) return null;
+            if (!isFinite(got) || Math.abs(got - duration) >= 0.75) {
+                return fail(`varigheden passede ikke: ${got}s mod ${duration}s`);
+            }
         } catch (e) {
-            return null;
+            return fail('resultatet kunne ikke afspilles');
         }
+
+        console.log('Video optimeret', {
+            seconds: ((performance.now() - started) / 1000).toFixed(1),
+            ...stats,
+        });
 
         return {
             file: new File([blob], rename(file.name, 'mp4'), { type: 'video/mp4' }),
@@ -275,8 +354,11 @@
                 return out || { file, note: null };
             }
             if (/^video\//.test(file.type)) {
-                if (onProgress) onProgress('Optimerer video', 0);
-                const out = await optimiseVideo(file, r => onProgress && onProgress('Optimerer video', r));
+                // Frames are captured as the clip plays, which stops if the tab is
+                // hidden - so the one instruction worth giving is to stay on it.
+                const stage = 'Optimerer video - bliv på denne fane';
+                if (onProgress) onProgress(stage, 0);
+                const out = await optimiseVideo(file, r => onProgress && onProgress(stage, r));
                 return out || { file, note: null };
             }
         } catch (e) {
