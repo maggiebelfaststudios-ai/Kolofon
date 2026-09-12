@@ -141,6 +141,39 @@ function formatPrice(value) {
     return !isNaN(num) ? `DKK ${num.toLocaleString('da-DK')}` : String(value ?? '');
 }
 
+/**
+ * Reports a shop event to Meta, if the visitor consented. Does nothing
+ * otherwise - including when no pixel is configured at all.
+ */
+function trackPixel(name, params, options) {
+    if (window.KolofonPixel) window.KolofonPixel.track(name, params, options);
+}
+
+/** The shape Meta expects for one product. */
+function pixelProduct(product) {
+    const price = typeof product.price === 'number'
+        ? product.price
+        : parseFloat(String(product.price).replace(/[^0-9.,]/g, '').replace(',', '.'));
+    return {
+        content_type: 'product',
+        content_ids: [String(product.id)],
+        content_name: product.title,
+        value: isNaN(price) ? 0 : price,
+        currency: 'DKK',
+    };
+}
+
+/** The shape Meta expects for a whole cart. */
+function pixelCart(cart) {
+    return {
+        content_type: 'product',
+        content_ids: cart.map(item => String(item.id)),
+        num_items: cart.reduce((n, item) => n + item.quantity, 0),
+        value: cart.reduce((sum, item) => sum + item.priceValue * item.quantity, 0),
+        currency: 'DKK',
+    };
+}
+
 function initHomeVideos() {
     const left = document.querySelector('.home-bg-video--left');
     const right = document.querySelector('.home-bg-video--right');
@@ -738,6 +771,10 @@ async function initCarousel() {
     updateProduct(currentProductIndex);
     renderRecommendations();
 
+    if (products[currentProductIndex]) {
+        trackPixel('ViewContent', pixelProduct(products[currentProductIndex]));
+    }
+
     // Add to Cart Logic
     if (addToCartBtn) {
         addToCartBtn.addEventListener('click', () => {
@@ -752,6 +789,8 @@ async function initCarousel() {
                 : (slides.find(s => s.type === 'image') || {}).url || null;
             
             if (addToCart(product, thumbnail)) {
+                trackPixel('AddToCart', pixelProduct(product));
+
                 // Visual feedback
                 if (btnText && getComputedStyle(btnText).display !== 'none') {
                     const originalText = btnText.textContent;
@@ -831,6 +870,15 @@ function initCartPage() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'success') {
         // Payment confirmed — clear cart and show thank you
+        // Read the cart before it is emptied on the next line, or the purchase
+        // would be reported with no items and a value of zero. The order id goes
+        // along as the event id: if this purchase is ever also reported from the
+        // server, Meta uses that to count it once rather than twice.
+        const purchased = JSON.parse(localStorage.getItem('kolofon_cart') || '[]');
+        if (purchased.length) {
+            trackPixel('Purchase', pixelCart(purchased), { eventID: params.get('order_id') || undefined });
+        }
+
         localStorage.removeItem('kolofon_cart');
         updateCartCount();
         cartContainer.innerHTML = `
@@ -1112,6 +1160,7 @@ function initCartPage() {
         const checkoutBtn = document.getElementById('checkout-btn');
         if (checkoutBtn) {
             checkoutBtn.addEventListener('click', () => {
+                trackPixel('InitiateCheckout', pixelCart(JSON.parse(localStorage.getItem('kolofon_cart') || '[]')));
                 renderCheckout();
             });
         }

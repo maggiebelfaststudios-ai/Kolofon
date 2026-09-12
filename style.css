@@ -1034,3 +1034,67 @@ body.page-fade-out {
     /* Three footer columns will not fit a narrow phone */
     .footer-content { grid-template-columns: 1fr; }
 }
+
+/* ===== CONSENT BAR ===== */
+/* Only ever added to the page by meta-pixel.js, and only when a pixel is
+   configured and the visitor has not yet answered. Both buttons are the same
+   size deliberately: declining has to be as easy as accepting. */
+.consent-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    padding: 1rem 1.5rem;
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-border);
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.consent-text {
+    flex: 1 1 22rem;
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-text-muted);
+}
+
+.consent-text a { color: var(--color-text); }
+
+.consent-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.consent-btn {
+    min-width: 7.5rem;
+    padding: 0.625rem 1.25rem;
+    font-family: inherit;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    background: transparent;
+    color: var(--color-text);
+    border: 1px solid var(--color-text);
+    transition: opacity 0.2s ease;
+}
+
+.consent-btn--accept {
+    background: var(--color-text);
+    color: var(--color-bg);
+}
+
+.consent-btn:hover { opacity: 0.8; }
+
+@media (max-width: 560px) {
+    .consent-actions { width: 100%; }
+    /* Share the width evenly rather than letting one look like the obvious choice */
+    .consent-btn { flex: 1; min-width: 0; }
+}
