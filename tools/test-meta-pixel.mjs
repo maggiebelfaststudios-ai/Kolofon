@@ -71,7 +71,9 @@ function load({ pixelId = '', stored = null } = {}) {
         console: { log() {}, warn() {} },
     };
 
-    const prepared = source.replace("const PIXEL_ID = '';", `const PIXEL_ID = '${pixelId}';`);
+    // Substitute whatever the constant currently holds, so every scenario -
+    // including "switched off" - stays testable after a real ID ships.
+    const prepared = source.replace(/const PIXEL_ID = '[^']*';/, `const PIXEL_ID = '${pixelId}';`);
     const keys = Object.keys(sandbox);
     new Function(...keys, prepared)(...keys.map(k => sandbox[k]));
 
@@ -82,7 +84,7 @@ function load({ pixelId = '', stored = null } = {}) {
 
 const ID = '123456789012345';
 
-console.log('\nno pixel configured (how it ships today)');
+console.log('\nno pixel configured (switched off)');
 {
     const t = load();
     ok('shows no banner', t.banner() === null);
@@ -147,6 +149,13 @@ console.log('\nchanging your mind');
     t.win.KolofonPixel.choose();
     ok('asks again', t.banner() !== null);
     ok('forgets the old answer', !t.store.has('kolofon_consent'));
+}
+
+console.log('\nthe file as it ships');
+{
+    const shipped = (source.match(/const PIXEL_ID = '([^']*)';/) || [])[1];
+    ok('has a dataset id set', /^[0-9]{15,20}$/.test(shipped || ''),
+        shipped === '' ? 'empty - the pixel is switched off' : 'value: ' + shipped);
 }
 
 console.log(`\n  ${pass} passed, ${fail} failed\n`);

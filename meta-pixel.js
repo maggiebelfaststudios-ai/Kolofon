@@ -14,7 +14,7 @@
     'use strict';
 
     // From Events Manager: the dataset's 15-16 digit ID (the "Vibration" dataset).
-    const PIXEL_ID = '';
+    const PIXEL_ID = '120251615413430294';
 
     // 'accepted' | 'declined'. Kept in localStorage rather than a cookie, so
     // remembering the answer does not itself require consent.
