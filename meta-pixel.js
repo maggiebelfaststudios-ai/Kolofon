@@ -13,8 +13,10 @@
 (function () {
     'use strict';
 
-    // From Events Manager: the dataset's 15-16 digit ID (the "Vibration" dataset).
-    const PIXEL_ID = '120251615413430294';
+    // The Vibration dataset, from Events Manager - Indstillinger. Note this is
+    // NOT a campaign, ad set or ad ID: those start 120... and are numbers Meta
+    // uses internally. Installing one of those is why the pixel first sat idle.
+    const PIXEL_ID = '1560760452213208';
 
     // 'accepted' | 'declined'. Kept in localStorage rather than a cookie, so
     // remembering the answer does not itself require consent.
