@@ -292,7 +292,7 @@ const TRANSLATIONS = {
         cart_browse: "Se Kollektion",
         about_title: "Om Kolofon",
         about_text_1: "Kolofon repræsenterer krydsfeltet mellem digital præcision og fysisk nærvær. Jeg tror på, at vægkunst ikke bare skal observeres, men opleves.",
-        about_text_2: "Mine premium akrylværker er skabt til at fange lys og dybde, hvilket forvandler atmosfæren i ethvert rum. Født ud af et ønske om at bringe gallerikvalitet ind i det moderne hjem, er hvert stykke i min kollektion et studie i form og funktion.",
+        about_text_2: "Mine akrylværker er skabt til at fange lys og dybde, hvilket forvandler atmosfæren i ethvert rum. Født ud af et ønske om at bringe gallerikvalitet ind i det moderne hjem, er hvert stykke i min kollektion et studie i form og funktion.",
         about_text_3: "Jeg inviterer dig til at udforske min kollektion og finde det værk, der resonerer med dit rum.",
         contact_title: "Kontakt Mig",
         contact_text: "Har du spørgsmål om en ordre eller en speciel forespørgsel? Jeg er her for at hjælpe.",
