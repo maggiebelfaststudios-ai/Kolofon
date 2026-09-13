@@ -305,8 +305,8 @@ const TRANSLATIONS = {
         out_of_stock_msg: "Beklager, denne vare er ikke på lager.",
         low_stock_msg: "Beklager, vi har kun {qty} enheder på lager.",
         checkout_title: "Gå til kassen",
-        full_name: "Fulde Navn",
-        email: "Email",
+        full_name: "Fulde navn",
+        email: "E-mail",
         phone: "Telefon",
         address: "Adresse",
         city: "By",
@@ -919,11 +919,11 @@ function initCartPage() {
                 <form id="purchase-form">
                     <div class="form-group">
                         <label class="form-label">${t('full_name')}</label>
-                        <input type="text" name="fullName" class="form-input" required placeholder="John Doe">
+                        <input type="text" name="fullName" class="form-input" required placeholder="Fornavn og efternavn">
                     </div>
                     <div class="form-group">
                         <label class="form-label">${t('email')}</label>
-                        <input type="email" name="email" class="form-input" required placeholder="john@example.com">
+                        <input type="email" name="email" class="form-input" required placeholder="navn@eksempel.dk">
                     </div>
                     <div class="form-group">
                         <label class="form-label">${t('phone')}</label>
@@ -931,16 +931,16 @@ function initCartPage() {
                     </div>
                     <div class="form-group">
                         <label class="form-label">${t('address')}</label>
-                        <input type="text" name="address" class="form-input" required placeholder="Street Address">
+                        <input type="text" name="address" class="form-input" required placeholder="Vejnavn og husnummer">
                     </div>
                     <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                         <div>
                             <label class="form-label">${t('city')}</label>
-                            <input type="text" name="city" class="form-input" required placeholder="City">
+                            <input type="text" name="city" class="form-input" required placeholder="By">
                         </div>
                         <div>
                             <label class="form-label">${t('zip')}</label>
-                            <input type="text" name="zip" class="form-input" required placeholder="Zip">
+                            <input type="text" name="zip" class="form-input" required placeholder="Postnummer">
                         </div>
                     </div>
 
