@@ -507,10 +507,16 @@ async function initCarousel() {
     let currentProductIndex = 0;
     let currentSlideIndex = 0;
 
-    // A product's gallery: its main photo, then any extra photos from the
-    // "images" column, then its video. Products with one photo get one slide.
+    // A product's gallery: its video first, then its main photo, then any extra
+    // photos from the "images" column. The video leads because it is what sells
+    // the piece - and it is what visitors arriving from an ad have just watched.
+    // While it loads, prepareVideo shows the main photo as its poster, so the
+    // first slide is never an empty black box. Products with one photo get one
+    // slide, exactly as before.
     const getProductSlides = (product) => {
         const slides = [];
+
+        if (product.video) slides.push({ type: 'video', url: product.video });
 
         if (product.photo) slides.push({ type: 'image', url: product.photo });
 
@@ -525,8 +531,6 @@ async function initCarousel() {
                 console.warn('Failed to parse images for product', product.id, e);
             }
         }
-
-        if (product.video) slides.push({ type: 'video', url: product.video });
 
         return slides.length ? slides : [{ type: 'image', url: '' }];
     };
