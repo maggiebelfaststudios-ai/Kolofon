@@ -510,9 +510,8 @@ async function initCarousel() {
     // A product's gallery: its video first, then its main photo, then any extra
     // photos from the "images" column. The video leads because it is what sells
     // the piece - and it is what visitors arriving from an ad have just watched.
-    // While it loads, prepareVideo shows the main photo as its poster, so the
-    // first slide is never an empty black box. Products with one photo get one
-    // slide, exactly as before.
+    // While it loads the slide is black (see prepareVideo). Products with one
+    // photo get one slide, exactly as before.
     const getProductSlides = (product) => {
         const slides = [];
 
@@ -560,29 +559,36 @@ async function initCarousel() {
         }
     };
 
+    // Black while the video has no frame to show, then back to the panel colour
+    // once it does - so the bars beside a portrait clip match the photos while it
+    // plays, rather than framing it in black.
+    if (videoMainEl) {
+        videoMainEl.addEventListener('loadeddata', () => videoMainEl.classList.remove('is-loading'));
+    }
+
     // Point the video element at this product as soon as the product loads, so
-    // it is already buffering before anyone swipes to it, and give it the photo
-    // as a poster so that slide shows the picture rather than an empty black
-    // box while the first frame decodes.
+    // it is already buffering. No poster: showing the photo first and then
+    // cutting to the video read as a jump, so the slide waits in black instead.
     const prepareVideo = (product) => {
         if (!videoMainEl) return;
 
         const slides = getProductSlides(product);
         const videoSlide = slides.find(s => s.type === 'video');
-        const firstImage = slides.find(s => s.type === 'image' && s.url);
+
+        videoMainEl.removeAttribute('poster');
 
         if (!videoSlide) {
+            videoMainEl.classList.remove('is-loading');
             videoMainEl.removeAttribute('src');
-            videoMainEl.removeAttribute('poster');
             videoMainEl.load();
             return;
         }
 
         if (videoMainEl.getAttribute('src') !== videoSlide.url) {
+            videoMainEl.classList.add('is-loading');
             videoMainEl.src = videoSlide.url;
             videoMainEl.load();
         }
-        if (firstImage) videoMainEl.poster = firstImage.url;
     };
 
     // Slides the new frame in from the direction of travel. The enter classes

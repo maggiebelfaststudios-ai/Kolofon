@@ -188,6 +188,14 @@ body {
     display: block;
     transition: opacity 0.4s ease, transform 0.4s ease;
 }
+
+/* Black until the first frame is ready. Without it the light panel behind the
+   player shows through as a white flash. main.js removes the class on
+   loadeddata, so a portrait clip's side bars go back to the panel colour and
+   match the photos while it plays. */
+.carousel-video.is-loading {
+    background: #000;
+}
 /* The inactive frame stays laid out and simply fades. Using display:none
    here left an instant where neither photo nor video was painted, which
    showed as a flash of the panel colour behind them. */
