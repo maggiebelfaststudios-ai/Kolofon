@@ -1106,3 +1106,16 @@ body.page-fade-out {
     /* Share the width evenly rather than letting one look like the obvious choice */
     .consent-btn { flex: 1; min-width: 0; }
 }
+
+/* The bar sits at the bottom of the screen, where the product page floats its
+   "Læg i kurv" button - so on a phone the banner covered it entirely until the
+   visitor answered. meta-pixel.js publishes the bar's real height; these lift
+   the button clear of it and keep the foot of the page reachable while it is
+   up. Both revert the moment the visitor answers. */
+body.has-consent-bar .action-area {
+    bottom: calc(1.5rem + var(--consent-bar-height, 0px));
+}
+
+body.has-consent-bar {
+    padding-bottom: var(--consent-bar-height, 0px);
+}

@@ -71,9 +71,33 @@
         }
     }
 
+    // The bar is fixed to the bottom of the screen, which on a phone is exactly
+    // where the product page floats its "Læg i kurv" button. Rather than let this
+    // file know about that button, it publishes its own height and the page
+    // decides what to lift out of the way.
+    let remeasure = null;
+
+    function publishBarHeight(bar) {
+        remeasure = () => document.body.style.setProperty('--consent-bar-height', bar.offsetHeight + 'px');
+        remeasure();
+        document.body.classList.add('has-consent-bar');
+        // The text rewraps when the phone is turned, changing the height
+        window.addEventListener('resize', remeasure);
+    }
+
+    function clearBarHeight() {
+        document.body.classList.remove('has-consent-bar');
+        document.body.style.removeProperty('--consent-bar-height');
+        if (remeasure) {
+            window.removeEventListener('resize', remeasure);
+            remeasure = null;
+        }
+    }
+
     function removeBanner() {
         const bar = document.querySelector('.consent-bar');
         if (bar) bar.remove();
+        clearBarHeight();
     }
 
     function showBanner() {
@@ -104,6 +128,7 @@
         });
 
         document.body.appendChild(bar);
+        publishBarHeight(bar);
     }
 
     function init() {
