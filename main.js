@@ -561,39 +561,17 @@ async function initCarousel() {
 
     // Starts the clip, but only if it is the slide actually on screen.
     //
-    // The video leads the gallery now, so its first play() happens on page load,
-    // right after prepareVideo called load() - and a play() issued while the
-    // browser is still selecting the resource is dropped. That is what left the
-    // clip frozen on its first frame. Every readiness event calls this, so
-    // whichever one arrives first gets it moving and the others do nothing.
-    // Autoplay rules differ by device and the refusal is silent, which makes this
-    // impossible to diagnose from a desktop. Adding ?vdebug=1 to the address puts
-    // the reason on the screen; without it none of this runs.
-    const videoDebug = new URLSearchParams(location.search).has('vdebug');
-    let debugBox = null;
-    const say = (line) => {
-        if (!videoDebug) return;
-        if (!debugBox) {
-            debugBox = document.createElement('div');
-            debugBox.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#000;color:#0f0;font:12px/1.5 monospace;padding:10px;white-space:pre-wrap';
-            document.body.appendChild(debugBox);
-        }
-        const v = videoMainEl;
-        debugBox.textContent = line + '\n' +
-            'paused=' + v.paused + '  readyState=' + v.readyState + '  muted=' + v.muted + '\n' +
-            'autoplay=' + v.autoplay + '  playsInline=' + v.playsInline + '  t=' + v.currentTime.toFixed(2) + '\n' +
-            'fejl=' + (v.error ? v.error.code + ' ' + v.error.message : 'ingen');
-    };
-
+    // Phones withhold playback permission until the visitor has interacted with
+    // the page, and iOS withholds it altogether while Low Power Mode is on. The
+    // refusal is silent, so a clip that is not allowed to start simply sits on its
+    // first frame. Both the readiness events and the first real interaction call
+    // this, so playback begins at the earliest moment it is permitted.
     const playIfOnScreen = () => {
         if (!videoMainEl || videoMainEl.hidden || !videoMainEl.paused) return;
         // Below HAVE_CURRENT_DATA there is no frame yet and the browser discards
         // the call, so leave it to the readiness handlers rather than guessing.
-        if (videoMainEl.readyState < 2) { say('venter paa data'); return; }
-        videoMainEl.play().then(
-            () => say('play() lykkedes'),
-            e => say('play() AFVIST: ' + e.name + ' - ' + e.message)
-        );
+        if (videoMainEl.readyState < 2) return;
+        videoMainEl.play().catch(() => {}); // refused until the visitor interacts
     };
 
     // Black while the video has no frame to show, then back to the panel colour
@@ -605,16 +583,11 @@ async function initCarousel() {
             playIfOnScreen();
         });
         videoMainEl.addEventListener('canplay', playIfOnScreen);
-        // A clip that has run to its end with loop somehow missed is still dead
-        // air on the page; nudging it here costs nothing when loop works.
-        videoMainEl.addEventListener('ended', playIfOnScreen);
 
-        // Phones refuse autoplay until the visitor has interacted with the page,
-        // and the refusal is silent - which is what left the clip frozen on its
-        // first frame while the same clip played the moment you swiped to it and
-        // back. The homepage videos hit this too and answer it the same way: ask
-        // again on the first real interaction, which is when permission arrives.
-        // A scroll does not count, so listen for the gestures that do.
+        // Where playback is refused - on iOS notably while Low Power Mode is on -
+        // permission arrives with the visitor's first interaction, so ask again
+        // then. The homepage players carry the same retry for the same reason.
+        // A scroll does not grant permission, so listen for the gestures that do.
         ['touchstart', 'pointerdown', 'keydown'].forEach(evt => {
             document.addEventListener(evt, playIfOnScreen, { once: true, passive: true });
         });
