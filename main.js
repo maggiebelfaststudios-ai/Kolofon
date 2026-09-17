@@ -586,6 +586,16 @@ async function initCarousel() {
         // A clip that has run to its end with loop somehow missed is still dead
         // air on the page; nudging it here costs nothing when loop works.
         videoMainEl.addEventListener('ended', playIfOnScreen);
+
+        // Phones refuse autoplay until the visitor has interacted with the page,
+        // and the refusal is silent - which is what left the clip frozen on its
+        // first frame while the same clip played the moment you swiped to it and
+        // back. The homepage videos hit this too and answer it the same way: ask
+        // again on the first real interaction, which is when permission arrives.
+        // A scroll does not count, so listen for the gestures that do.
+        ['touchstart', 'pointerdown', 'keydown'].forEach(evt => {
+            document.addEventListener(evt, playIfOnScreen, { once: true, passive: true });
+        });
     }
 
     // Point the video element at this product as soon as the product loads, so
