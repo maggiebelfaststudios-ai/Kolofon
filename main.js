@@ -559,11 +559,33 @@ async function initCarousel() {
         }
     };
 
+    // Starts the clip, but only if it is the slide actually on screen.
+    //
+    // The video leads the gallery now, so its first play() happens on page load,
+    // right after prepareVideo called load() - and a play() issued while the
+    // browser is still selecting the resource is dropped. That is what left the
+    // clip frozen on its first frame. Every readiness event calls this, so
+    // whichever one arrives first gets it moving and the others do nothing.
+    const playIfOnScreen = () => {
+        if (!videoMainEl || videoMainEl.hidden || !videoMainEl.paused) return;
+        // Below HAVE_CURRENT_DATA there is no frame yet and the browser discards
+        // the call, so leave it to the readiness handlers rather than guessing.
+        if (videoMainEl.readyState < 2) return;
+        videoMainEl.play().catch(() => {}); // a refused autoplay must not break the page
+    };
+
     // Black while the video has no frame to show, then back to the panel colour
     // once it does - so the bars beside a portrait clip match the photos while it
     // plays, rather than framing it in black.
     if (videoMainEl) {
-        videoMainEl.addEventListener('loadeddata', () => videoMainEl.classList.remove('is-loading'));
+        videoMainEl.addEventListener('loadeddata', () => {
+            videoMainEl.classList.remove('is-loading');
+            playIfOnScreen();
+        });
+        videoMainEl.addEventListener('canplay', playIfOnScreen);
+        // A clip that has run to its end with loop somehow missed is still dead
+        // air on the page; nudging it here costs nothing when loop works.
+        videoMainEl.addEventListener('ended', playIfOnScreen);
     }
 
     // Point the video element at this product as soon as the product loads, so
@@ -610,7 +632,7 @@ async function initCarousel() {
             imageMainEl.hidden = true;
             if (videoMainEl) {
                 videoMainEl.hidden = false;
-                videoMainEl.play().catch(() => {}); // autoplay may be refused; harmless
+                playIfOnScreen();
             }
             animateSlide(videoMainEl, direction);
         } else {
