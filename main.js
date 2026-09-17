@@ -566,12 +566,34 @@ async function initCarousel() {
     // browser is still selecting the resource is dropped. That is what left the
     // clip frozen on its first frame. Every readiness event calls this, so
     // whichever one arrives first gets it moving and the others do nothing.
+    // Autoplay rules differ by device and the refusal is silent, which makes this
+    // impossible to diagnose from a desktop. Adding ?vdebug=1 to the address puts
+    // the reason on the screen; without it none of this runs.
+    const videoDebug = new URLSearchParams(location.search).has('vdebug');
+    let debugBox = null;
+    const say = (line) => {
+        if (!videoDebug) return;
+        if (!debugBox) {
+            debugBox = document.createElement('div');
+            debugBox.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#000;color:#0f0;font:12px/1.5 monospace;padding:10px;white-space:pre-wrap';
+            document.body.appendChild(debugBox);
+        }
+        const v = videoMainEl;
+        debugBox.textContent = line + '\n' +
+            'paused=' + v.paused + '  readyState=' + v.readyState + '  muted=' + v.muted + '\n' +
+            'autoplay=' + v.autoplay + '  playsInline=' + v.playsInline + '  t=' + v.currentTime.toFixed(2) + '\n' +
+            'fejl=' + (v.error ? v.error.code + ' ' + v.error.message : 'ingen');
+    };
+
     const playIfOnScreen = () => {
         if (!videoMainEl || videoMainEl.hidden || !videoMainEl.paused) return;
         // Below HAVE_CURRENT_DATA there is no frame yet and the browser discards
         // the call, so leave it to the readiness handlers rather than guessing.
-        if (videoMainEl.readyState < 2) return;
-        videoMainEl.play().catch(() => {}); // a refused autoplay must not break the page
+        if (videoMainEl.readyState < 2) { say('venter paa data'); return; }
+        videoMainEl.play().then(
+            () => say('play() lykkedes'),
+            e => say('play() AFVIST: ' + e.name + ' - ' + e.message)
+        );
     };
 
     // Black while the video has no frame to show, then back to the panel colour
@@ -603,6 +625,14 @@ async function initCarousel() {
     // cutting to the video read as a jump, so the slide waits in black instead.
     const prepareVideo = (product) => {
         if (!videoMainEl) return;
+
+        // The homepage players set these in code rather than trusting the markup,
+        // because a source assigned by script after the page has loaded can leave
+        // the attributes behind - and iOS reads the properties when it decides
+        // whether a clip is allowed to start by itself.
+        videoMainEl.muted = true;
+        videoMainEl.playsInline = true;
+        videoMainEl.autoplay = true;
 
         const slides = getProductSlides(product);
         const videoSlide = slides.find(s => s.type === 'video');
