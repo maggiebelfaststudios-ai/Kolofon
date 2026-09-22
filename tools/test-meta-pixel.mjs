@@ -31,6 +31,19 @@ function load({ pixelId = '', stored = null } = {}) {
         _children: [],
         _listeners: {},
         className: '',
+        // What the consent bar uses to lift the "Læg i kurv" button clear of it
+        offsetHeight: 170,
+        style: {
+            _props: {},
+            setProperty(k, v) { this._props[k] = v; },
+            removeProperty(k) { delete this._props[k]; },
+        },
+        classList: {
+            _set: new Set(),
+            add(c) { this._set.add(c); },
+            remove(c) { this._set.delete(c); },
+            contains(c) { return this._set.has(c); },
+        },
         attributes: {},
         setAttribute(k, v) { this.attributes[k] = v; },
         getAttribute(k) { return this.attributes[k] ?? null; },
@@ -59,7 +72,8 @@ function load({ pixelId = '', stored = null } = {}) {
         querySelector: sel => (sel === '.consent-bar' ? (body._children.find(c => c.className === 'consent-bar' && !c._removed) || null) : null),
     };
 
-    const win = {};
+    // The bar re-measures itself when the phone is turned
+    const win = { addEventListener() {}, removeEventListener() {} };
     const sandbox = {
         window: win,
         document: doc,
@@ -149,6 +163,68 @@ console.log('\nchanging your mind');
     t.win.KolofonPixel.choose();
     ok('asks again', t.banner() !== null);
     ok('forgets the old answer', !t.store.has('kolofon_consent'));
+}
+
+console.log('\nthe bar keeps clear of "Læg i kurv"');
+{
+    const t = load({ pixelId: ID });
+    ok('publishes its height while it is up', t.body.style._props['--consent-bar-height'] === '170px', JSON.stringify(t.body.style._props));
+    ok('marks the page', t.body.classList.contains('has-consent-bar'));
+    t.banner().click('accepted');
+    ok('clears both once answered', !t.body.classList.contains('has-consent-bar') && !('--consent-bar-height' in t.body.style._props));
+}
+
+console.log('\nwhat happened before the answer');
+{
+    const t = load({ pixelId: ID });
+    t.win.KolofonPixel.track('ViewContent', { content_ids: ['1789125938822'], value: 1250 });
+    t.win.KolofonPixel.track('AddToCart', { value: 1250 });
+    ok('is not sent while the question is open', typeof t.win.fbq === 'undefined' && t.metaScripts().length === 0);
+    t.banner().click('accepted');
+    const names = t.win.fbq.queue.filter(c => c[0] === 'track').map(c => c[1]);
+    ok('is sent once they accept, after the page view, in order',
+        names.join(',') === 'PageView,ViewContent,AddToCart', names.join(','));
+    const vc = t.win.fbq.queue.find(c => c[1] === 'ViewContent');
+    ok('arrives with its details intact', vc && vc[2].content_ids[0] === '1789125938822' && vc[2].value === 1250, JSON.stringify(vc));
+}
+{
+    const t = load({ pixelId: ID });
+    t.win.KolofonPixel.track('ViewContent', { value: 1250 });
+    t.banner().click('declined');
+    ok('is thrown away if they decline', typeof t.win.fbq === 'undefined' && t.metaScripts().length === 0);
+    t.win.KolofonPixel.choose();
+    t.banner().click('accepted');
+    const names = t.win.fbq.queue.filter(c => c[0] === 'track').map(c => c[1]);
+    ok('and does not resurface if they later change their mind', names.join(',') === 'PageView', names.join(','));
+}
+{
+    const t = load({ pixelId: ID, stored: 'declined' });
+    t.win.KolofonPixel.track('ViewContent', { value: 1250 });
+    t.win.KolofonPixel.choose();
+    t.banner().click('accepted');
+    const names = t.win.fbq.queue.filter(c => c[0] === 'track').map(c => c[1]);
+    ok('is not even held for someone who had declined', names.join(',') === 'PageView', names.join(','));
+}
+{
+    const t = load({ pixelId: ID });
+    for (let i = 0; i < 50; i++) t.win.KolofonPixel.track('ViewContent', { i });
+    t.banner().click('accepted');
+    const held = t.win.fbq.queue.filter(c => c[1] === 'ViewContent').length;
+    ok('is capped, so a page left open cannot pile events up', held === 20, held + ' held');
+}
+{
+    const t = load({ pixelId: ID, stored: 'accepted' });
+    t.win.KolofonPixel.track('ViewContent', { value: 1250 });
+    ok('a returning visitor who accepted is reported straight away', t.win.fbq.queue.some(c => c[1] === 'ViewContent'));
+}
+{
+    const t = load({ pixelId: ID });
+    t.banner().click('accepted');
+    t.win.KolofonPixel.choose();
+    t.banner().click('declined');
+    const before = t.win.fbq.queue.length;
+    t.win.KolofonPixel.track('ViewContent', { value: 1250 });
+    ok('switching to "Afvis" stops any further events on the page', t.win.fbq.queue.length === before);
 }
 
 console.log('\nthe file as it ships');

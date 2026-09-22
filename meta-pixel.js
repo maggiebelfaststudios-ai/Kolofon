@@ -31,6 +31,18 @@
 
     let pixelLoaded = false;
 
+    // Events from before the visitor has answered the banner. The product page
+    // reports its product the moment it loads - seconds before anyone has read
+    // the banner - and those used to be dropped, so every first-time visitor who
+    // then accepted was counted as a page view but never as a product view.
+    // Product views are what the ad set optimises for, so Meta was learning
+    // almost only from returning visitors. They are held in memory, sent on
+    // "Accepter" and discarded on "Afvis" - never written anywhere - so nothing
+    // leaves the page without consent.
+    let pending = [];
+    const MAX_PENDING = 20;
+    let declined = remembered() === 'declined';
+
     /** Loads Meta's script and reports the current page. Only ever called after consent. */
     function loadPixel() {
         if (pixelLoaded || !PIXEL_ID) return;
@@ -54,20 +66,35 @@
 
         fbq('init', PIXEL_ID);
         fbq('track', 'PageView');
+
+        // Then whatever happened while the banner was up, in the order it
+        // happened - above all, the product the visitor is looking at
+        const held = pending;
+        pending = [];
+        held.forEach(args => send(args[0], args[1], args[2]));
+    }
+
+    function send(name, params, options) {
+        try {
+            window.fbq('track', name, params || {}, options || undefined);
+        } catch (e) {
+            // Blocked by an extension, most likely. Never break the page for it.
+        }
     }
 
     /**
-     * Reports one event, or does nothing if the visitor has not consented.
+     * Reports one event. Before the visitor has answered it is held, and sent
+     * only if they accept; after a refusal it goes nowhere.
      *
      * `options.eventID` is worth setting on a purchase: if the same purchase is
      * ever also reported from the server, Meta uses that id to count it once.
      */
     function track(name, params, options) {
-        if (!pixelLoaded || typeof window.fbq !== 'function') return;
-        try {
-            window.fbq('track', name, params || {}, options || undefined);
-        } catch (e) {
-            // Blocked by an extension, most likely. Never break the page for it.
+        if (declined) return;
+        if (pixelLoaded && typeof window.fbq === 'function') {
+            send(name, params, options);
+        } else if (PIXEL_ID && pending.length < MAX_PENDING) {
+            pending.push([name, params, options]);
         }
     }
 
@@ -124,7 +151,13 @@
             if (!choice) return;
             remember(choice);
             removeBanner();
-            if (choice === 'accepted') loadPixel();
+            if (choice === 'accepted') {
+                loadPixel();
+            } else {
+                // A refusal covers what happened before it as well
+                declined = true;
+                pending = [];
+            }
         });
 
         document.body.appendChild(bar);
@@ -153,6 +186,9 @@
         /** Forgets the previous answer and asks again - for a link in the privacy policy. */
         choose() {
             try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+            // Undecided again. Nothing from while they had declined was held, so
+            // there is nothing old that could slip out if they now accept.
+            declined = false;
             removeBanner();
             if (PIXEL_ID) showBanner();
         },
