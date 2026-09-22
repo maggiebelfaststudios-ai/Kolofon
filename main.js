@@ -706,7 +706,7 @@ async function initCarousel() {
             titleEl.textContent = product.title;
             // Each product has its own URL now, so name the tab after it
             document.title = product.title ? product.title + ' — Kolofon' : 'Kolofon';
-            if (authorEl) authorEl.textContent = product.author ? `by ${product.author}` : '';
+            if (authorEl) authorEl.textContent = product.author ? `af ${product.author}` : '';
 
             // Per-product background blueprint. Clearing it falls back to the
             // plain panel colour, so products without one look unchanged.

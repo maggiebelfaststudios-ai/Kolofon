@@ -8,6 +8,42 @@
 # everyone who clones it pays for that. Shrinking the file before the commit
 # is the only way the large version never gets recorded at all.
 
+# ---------------------------------------------------------------- tests
+#
+# The test suites run before anything is recorded. On 17 Sep 2026 a change to
+# meta-pixel.js broke the pixel suite, nothing ran it, and it sat broken for
+# five days - long enough to hide a real fault in what reached Meta. The two
+# quick suites (a tenth of a second each) run on every commit. The capture
+# suite takes ten seconds and needs a network connection, so it runs only
+# when the video optimiser has changed.
+
+root=$(git rev-parse --show-toplevel)
+
+run_suite() {
+    out=$(node "$root/tools/$1.mjs" 2>&1)
+    if [ $? -ne 0 ]; then
+        echo "$out" | grep -E "FAIL|Error" | head -20
+        echo ""
+        echo "  $1 failed, so the commit was stopped before anything was recorded."
+        echo "  Run it yourself to see the whole output:  node tools/$1.mjs"
+        exit 1
+    fi
+    echo "  $1: $(echo "$out" | grep -oE '[0-9]+ passed, [0-9]+ failed' | tail -1)"
+}
+
+if command -v node >/dev/null 2>&1; then
+    echo "Running tests:"
+    run_suite test-meta-pixel
+    run_suite test-media-optimiser
+    if git diff --cached --name-only | grep -qE '^(media-optimiser\.js|tools/test-video-capture\.mjs)$'; then
+        run_suite test-video-capture
+    fi
+else
+    echo "Node is not installed, so the tests could not run."
+fi
+
+# ---------------------------------------------------------------- videos
+
 staged_videos=$(git diff --cached --name-only --diff-filter=ACM | grep -iE '\.(mp4|mov|m4v|webm)$')
 [ -z "$staged_videos" ] && exit 0
 

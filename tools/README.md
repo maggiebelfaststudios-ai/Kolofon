@@ -138,3 +138,15 @@ stopped when the tab comes back. So leaving is safe - it just does not make
 progress while you are gone.
 
 The admin page logs what happened to each file in the browser console.
+
+---
+
+# Tests run on every commit
+
+The pre-commit hook runs `test-meta-pixel.mjs` and `test-media-optimiser.mjs`
+on every commit - a tenth of a second each - and stops the commit if either
+fails. `test-video-capture.mjs` takes ten seconds and needs a network
+connection, so it only runs when `media-optimiser.js` or its test is staged.
+
+This exists because the pixel suite broke on 17 Sep 2026 and nothing ran it
+for five days. A suite nobody runs is not a safety net.
