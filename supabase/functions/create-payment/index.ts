@@ -177,7 +177,11 @@ Deno.serve(async (req: Request) => {
         callback_url: callbackUrl,
         success_url: `${SITE_URL}/cart.html?payment=success&order_id=${orderId}`,
         cancel_url: `${SITE_URL}/cart.html?payment=cancelled`,
-        autocapture: true,
+        // Reserved now, drawn when the parcel is booked. The Consumer
+        // Ombudsman is explicit that the money may only be taken from the
+        // customer's account once the goods are dispatched, and nothing in
+        // our terms agrees anything else. create-shipment does the capture.
+        autocapture: false,
         locale: 'da_DK',
         variables: variables,
       }),

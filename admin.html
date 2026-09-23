@@ -375,6 +375,17 @@
                 return;
             }
 
+            // The parcel is booked, so the money should now have been taken.
+            // If it was not, say so plainly - the reservation expires after a
+            // few days and the sale would quietly come to nothing.
+            if (shipData.payment_captured === false) {
+                alert(
+                    'Forsendelsen er oprettet, men betalingen blev IKKE trukket:\n\n'
+                    + (shipData.capture_error || 'Ukendt årsag')
+                    + '\n\nTræk beløbet manuelt i PensoPay, ellers udløber reservationen.'
+                );
+            }
+
             // A booking with no parcel number leaves the customer nothing to
             // track. Stop rather than send a confirmation with a blank field.
             if (!shipData.tracking_number) {

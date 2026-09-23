@@ -220,11 +220,75 @@ Deno.serve(async (req: Request) => {
 
     console.log(`Shipment created for ${order_id}, tracking: ${trackingNumber}`);
 
+    // ---- Now take the money ----
+    //
+    // Checkout only reserved it. The Consumer Ombudsman is explicit that the
+    // amount may not leave the customer's account before the goods are sent,
+    // and this is the moment they are. A failure is reported rather than
+    // swallowed: the parcel is already booked, so nobody would notice that the
+    // money never arrived until the reservation quietly expired.
+    let paymentCaptured = false;
+    let captureError: string | null = null;
+
+    const PENSOPAY_API_KEY = Deno.env.get('PENSOPAY_API_KEY');
+    const amountOere = Math.round(Number(order.total) * 100);
+
+    if (!PENSOPAY_API_KEY) {
+      captureError = 'PENSOPAY_API_KEY er ikke sat, så betalingen blev ikke trukket';
+    } else if (!order.pensopay_id) {
+      captureError = 'Ordren har intet PensoPay-id, så betalingen blev ikke trukket';
+    } else if (!Number.isFinite(amountOere) || amountOere < 1) {
+      captureError = `Ordrens beløb (${order.total}) kunne ikke omregnes, så betalingen blev ikke trukket`;
+    } else {
+      try {
+        const auth = { 'Authorization': `Bearer ${PENSOPAY_API_KEY}`, 'Content-Type': 'application/json' };
+        const payUrl = `https://api.pensopay.com/v2/payments/${order.pensopay_id}`;
+
+        // Ask before taking. Pressing the button twice must not try to charge
+        // twice, and PensoPay refuses a second capture with an error that would
+        // otherwise read like a real failure.
+        const look = await fetch(payUrl, { headers: auth });
+        const payment = look.ok ? await look.json() : null;
+
+        if (payment && Number(payment.captured) >= amountOere) {
+          paymentCaptured = true;
+          console.log(`Payment for ${order_id} was already captured`);
+        } else {
+          const capRes = await fetch(`${payUrl}/capture`, {
+            method: 'POST',
+            headers: auth,
+            body: JSON.stringify({ amount: amountOere }),
+          });
+          const capBody = await capRes.text();
+          if (capRes.ok) {
+            paymentCaptured = true;
+            console.log(`Captured ${amountOere} øre for ${order_id}`);
+          } else {
+            captureError = `PensoPay afviste trækket (${capRes.status}): ${capBody.slice(0, 300)}`;
+            console.error(captureError);
+          }
+        }
+      } catch (err) {
+        captureError = `Betalingen kunne ikke trækkes: ${err.message}`;
+        console.error(captureError);
+      }
+    }
+
+    if (paymentCaptured) {
+      const { error: statusError } = await supabase
+        .from('orders')
+        .update({ payment_status: 'captured' })
+        .eq('order_id', order_id);
+      if (statusError) console.error('Captured, but the order status was not updated:', statusError);
+    }
+
     return new Response(JSON.stringify({
       success: true,
       tracking_number: trackingNumber,
       parcels_booked: parcels.length,
       has_label: Boolean(labelBase64),
+      payment_captured: paymentCaptured,
+      capture_error: captureError,
     }), { status: 200, headers: corsHeaders });
 
   } catch (err) {
